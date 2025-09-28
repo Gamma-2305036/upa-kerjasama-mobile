@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../components/detail_perusahaan_page.dart';
 
 class ListPerusahaanPage extends StatelessWidget {
   const ListPerusahaanPage({super.key});
@@ -144,7 +145,7 @@ class ListPerusahaanPage extends StatelessWidget {
               child: ListView.builder(
                 itemCount: 8,
                 itemBuilder: (context, index) {
-                  return _buildCompanyCard(index);
+                  return _buildCompanyCard(context, index);
                 },
               ),
             ),
@@ -154,7 +155,7 @@ class ListPerusahaanPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCompanyCard(int index) {
+  Widget _buildCompanyCard(BuildContext context, int index) {
     final companies = [
       {
         'name': 'PT. Teknologi Indonesia',
@@ -162,6 +163,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Jakarta',
         'employees': '500+ Karyawan',
         'rating': '4.8',
+        'website': 'www.teknoindonesia.com',
+        'founded': '2015',
       },
       {
         'name': 'CV. Digital Solutions',
@@ -169,6 +172,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Bandung',
         'employees': '100+ Karyawan',
         'rating': '4.6',
+        'website': 'www.digitalsolutions.com',
+        'founded': '2018',
       },
       {
         'name': 'PT. Inovasi Kreatif',
@@ -176,6 +181,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Surabaya',
         'employees': '200+ Karyawan',
         'rating': '4.7',
+        'website': 'www.inovasikreatif.com',
+        'founded': '2016',
       },
       {
         'name': 'PT. Global Finance',
@@ -183,6 +190,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Jakarta',
         'employees': '1000+ Karyawan',
         'rating': '4.9',
+        'website': 'www.globalfinance.com',
+        'founded': '2010',
       },
       {
         'name': 'PT. Media Digital',
@@ -190,6 +199,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Yogyakarta',
         'employees': '150+ Karyawan',
         'rating': '4.5',
+        'website': 'www.mediadigital.com',
+        'founded': '2017',
       },
       {
         'name': 'CV. Startup Hub',
@@ -197,6 +208,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Bali',
         'employees': '50+ Karyawan',
         'rating': '4.4',
+        'website': 'www.startuphub.com',
+        'founded': '2019',
       },
       {
         'name': 'PT. E-commerce Plus',
@@ -204,6 +217,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Jakarta',
         'employees': '300+ Karyawan',
         'rating': '4.8',
+        'website': 'www.ecommerceplus.com',
+        'founded': '2014',
       },
       {
         'name': 'PT. Konsultan Pro',
@@ -211,6 +226,8 @@ class ListPerusahaanPage extends StatelessWidget {
         'location': 'Medan',
         'employees': '80+ Karyawan',
         'rating': '4.6',
+        'website': 'www.konsultanpro.com',
+        'founded': '2012',
       },
     ];
 
@@ -218,7 +235,6 @@ class ListPerusahaanPage extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(15),
@@ -227,41 +243,120 @@ class ListPerusahaanPage extends StatelessWidget {
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Company info
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Color(0xFF1A365D).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(
-                  Icons.business,
-                  color: Color(0xFF1A365D),
-                  size: 30,
-                ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(15),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DetailPerusahaanPage(companyData: company),
               ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Company info
+                Row(
                   children: [
-                    Text(
-                      company['name']!,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Color(0xFF1A365D).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Icon(
+                        Icons.business,
                         color: Color(0xFF1A365D),
+                        size: 30,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            company['name']!,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A365D),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            company['industry']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Rating
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star,
+                            size: 14,
+                            color: Colors.orange[600],
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            company['rating']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 15),
+                
+                // Company details
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 5),
                     Text(
-                      company['industry']!,
+                      company['location']!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Icon(
+                      Icons.people,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      company['employees']!,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -269,94 +364,32 @@ class ListPerusahaanPage extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              // Rating
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.star,
-                      size: 14,
-                      color: Colors.orange[600],
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      company['rating']!,
+                
+                const SizedBox(height: 15),
+                
+                // View button
+                Container(
+                  width: double.infinity,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF1A365D),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Lihat Detail',
                       style: TextStyle(
-                        fontSize: 12,
+                        color: Colors.white,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.orange[600],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 15),
-          
-          // Company details
-          Row(
-            children: [
-              Icon(
-                Icons.location_on,
-                size: 16,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 5),
-              Text(
-                company['location']!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Icon(
-                Icons.people,
-                size: 16,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 5),
-              Text(
-                company['employees']!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 15),
-          
-          // View button
-          Container(
-            width: double.infinity,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Color(0xFF1A365D),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Center(
-              child: Text(
-                'Lihat Detail',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

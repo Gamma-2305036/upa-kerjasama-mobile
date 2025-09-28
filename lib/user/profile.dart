@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import '../login_page.dart';
+import '../components/edit_profil_page.dart';
+import '../components/lamaran_saya_page.dart';
+import '../components/lowongan_tersimpan_page.dart';
+import '../components/notifikasi_page.dart';
+import '../components/bantuan_page.dart';
+import '../components/tentang_aplikasi_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -153,8 +159,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Edit Profil',
               subtitle: 'Ubah informasi pribadi',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Edit Profil coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const EditProfilPage()),
                 );
               },
             ),
@@ -164,8 +171,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Lamaran Saya',
               subtitle: 'Lihat status lamaran',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Lamaran Saya coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LamaranSayaPage()),
                 );
               },
             ),
@@ -175,8 +183,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Lowongan Tersimpan',
               subtitle: 'Lowongan yang disimpan',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Lowongan Tersimpan coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LowonganTersimpanPage()),
                 );
               },
             ),
@@ -186,8 +195,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Notifikasi',
               subtitle: 'Pengaturan notifikasi',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Notifikasi coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotifikasiPage()),
                 );
               },
             ),
@@ -197,8 +207,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Bantuan',
               subtitle: 'FAQ dan dukungan',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Bantuan coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const BantuanPage()),
                 );
               },
             ),
@@ -208,8 +219,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Tentang Aplikasi',
               subtitle: 'Versi 1.0.0',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Tentang Aplikasi coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TentangAplikasiPage()),
                 );
               },
             ),
