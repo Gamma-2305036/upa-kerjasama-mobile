@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../login_page.dart';
+import '../../login_page.dart';
 import '../components/edit_profil_page.dart';
 import '../components/lamaran_saya_page.dart';
 import '../components/lowongan_tersimpan_page.dart';

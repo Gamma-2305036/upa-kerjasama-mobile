@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import '../components/detail_perusahaan_page.dart';
 
-class ListPerusahaanPage extends StatelessWidget {
+class ListPerusahaanPage extends StatefulWidget {
   const ListPerusahaanPage({super.key});
+
+  @override
+  State<ListPerusahaanPage> createState() => _ListPerusahaanPageState();
+}
+
+class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +20,7 @@ class ListPerusahaanPage extends StatelessWidget {
         children: [
           // Header dengan gradient
           _buildHeader(),
-          
+
           // Main content area
           Expanded(
             child: _buildMainContent(),
@@ -57,7 +65,7 @@ class ListPerusahaanPage extends StatelessWidget {
               
               // Search bar dengan filter
               Container(
-                height: 50,
+                height: 54,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(25),
@@ -77,6 +85,12 @@ class ListPerusahaanPage extends StatelessWidget {
                     ),
                     Expanded(
                       child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            _query = value.trim().toLowerCase();
+                          });
+                        },
                         decoration: InputDecoration(
                           hintText: 'Cari nama perusahaan...',
                           hintStyle: TextStyle(
@@ -84,7 +98,8 @@ class ListPerusahaanPage extends StatelessWidget {
                             fontSize: 16,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 12),
                         ),
                       ),
                     ),
@@ -122,7 +137,7 @@ class ListPerusahaanPage extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -143,7 +158,8 @@ class ListPerusahaanPage extends StatelessWidget {
             // Company cards list
             Expanded(
               child: ListView.builder(
-                itemCount: 8,
+                padding: const EdgeInsets.only(bottom: 24),
+                itemCount: _filteredCompanies.length,
                 itemBuilder: (context, index) {
                   return _buildCompanyCard(context, index);
                 },
@@ -155,8 +171,7 @@ class ListPerusahaanPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCompanyCard(BuildContext context, int index) {
-    final companies = [
+  List<Map<String, String>> get _companies => [
       {
         'name': 'PT. Teknologi Indonesia',
         'industry': 'Teknologi',
@@ -231,7 +246,15 @@ class ListPerusahaanPage extends StatelessWidget {
       },
     ];
 
-    final company = companies[index % companies.length];
+    List<Map<String, String>> get _filteredCompanies {
+      if (_query.isEmpty) return _companies;
+      return _companies
+          .where((c) => (c['name']!.toLowerCase().contains(_query) || c['industry']!.toLowerCase().contains(_query)))
+          .toList();
+    }
+
+  Widget _buildCompanyCard(BuildContext context, int index) {
+    final company = _filteredCompanies[index % _filteredCompanies.length];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),

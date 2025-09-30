@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'navigation.dart';
-import '../user/beranda.dart';
-import '../user/listperusahaan.dart';
-import '../user/profile.dart';
+import '../pages/mitra_dashboard_page.dart';
+import '../pages/mitra_lowongan_page.dart';
+import '../pages/mitra_profil_page.dart';
 
-class MainNavigationWrapper extends StatefulWidget {
-  const MainNavigationWrapper({super.key});
+class MitraMainNavigation extends StatefulWidget {
+  const MitraMainNavigation({super.key});
 
   @override
-  State<MainNavigationWrapper> createState() => _MainNavigationWrapperState();
+  State<MitraMainNavigation> createState() => _MitraMainNavigationState();
 }
 
-class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
+class _MitraMainNavigationState extends State<MitraMainNavigation> {
   late PageController _pageController;
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const BerandaPage(),
-    const ListPerusahaanPage(),
-    const ProfilePage(),
+  final List<Widget> _pages = const [
+    MitraDashboardPage(),
+    MitraLowonganPage(),
+    MitraProfilPage(),
   ];
 
   @override
@@ -54,4 +54,5 @@ class _MainNavigationWrapperState extends State<MainNavigationWrapper> {
     );
   }
 }
+
 

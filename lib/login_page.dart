@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'dart:math';
-import 'components/main_navigation.dart';
+import 'user/components/main_navigation.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -32,22 +33,31 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            
-            // Logo and Header
-            _buildHeader(),
-            
-            const SizedBox(height: 50),
-            
-            // Main content
-            _buildMainContent(),
-            
-            const SizedBox(height: 50),
-          ],
+      body: SafeArea(
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: SizedBox(
+              width: 390,
+              child: Column(
+                children: [
+                  const SizedBox(height: 40),
+                  
+                  // Logo and Header
+                  _buildHeader(),
+                  
+                  const SizedBox(height: 36),
+                  
+                  // Main content
+                  _buildMainContent(),
+                  
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -273,6 +283,36 @@ class _LoginPageState extends State<LoginPage> {
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          // Mitra link (single centered line)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Center(
+              child: RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568)),
+                  children: [
+                    const TextSpan(text: 'Ingin merekrut kandidat? '),
+                    TextSpan(
+                      text: 'Masuk sebagai Perusahaan',
+                      style: const TextStyle(
+                        color: Color(0xFF0EA5E9),
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: (TapGestureRecognizer()
+                        ..onTap = () {
+                          Navigator.pushNamed(context, '/mitra/login');
+                        }),
                     ),
                   ],
                 ),

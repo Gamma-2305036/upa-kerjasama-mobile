@@ -496,8 +496,10 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
   }
 
   Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.all(20),
+    return SafeArea(
+      top: false,
+      child: Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -578,6 +580,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
           ),
         ],
       ),
+    ),
     );
   }
 

@@ -131,7 +131,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       itemCount: applications.length,
       itemBuilder: (context, index) {
         final application = applications[index];
