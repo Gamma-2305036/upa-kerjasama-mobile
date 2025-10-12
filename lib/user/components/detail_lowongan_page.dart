@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../models/job_model.dart';
 
 class DetailLowonganPage extends StatefulWidget {
-  final Map<String, dynamic> jobData;
+  final Job job;
   
   const DetailLowonganPage({
     super.key,
-    required this.jobData,
+    required this.job,
   });
 
   @override
@@ -128,7 +129,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  widget.jobData['position'] ?? 'Software Developer',
+                  widget.job.judul,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -136,7 +137,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
                   ),
                 ),
                 Text(
-                  widget.jobData['company'] ?? 'PT. Teknologi Indonesia',
+                  widget.job.mitraPerusahaan?.namaPerusahaan ?? 'Perusahaan',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 16,
@@ -168,11 +169,11 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
       child: Column(
         children: [
           // Job Details
-          _buildDetailRow(Icons.location_on, 'Lokasi', widget.jobData['location'] ?? 'Jakarta'),
-          _buildDetailRow(Icons.attach_money, 'Gaji', widget.jobData['salary'] ?? 'Rp 8-12 Juta'),
-          _buildDetailRow(Icons.work, 'Jenis', widget.jobData['type'] ?? 'Full Time'),
-          _buildDetailRow(Icons.schedule, 'Dibuka', widget.jobData['posted'] ?? '2 hari yang lalu'),
-          _buildDetailRow(Icons.people, 'Pelamar', widget.jobData['applicants'] ?? '45 pelamar'),
+          _buildDetailRow(Icons.location_on, 'Lokasi', widget.job.lokasi),
+          _buildDetailRow(Icons.attach_money, 'Gaji', _formatSalary(widget.job.gajiMin, widget.job.gajiMax)),
+          _buildDetailRow(Icons.work, 'Jenis', widget.job.jenisPekerjaan ?? 'Tidak disebutkan'),
+          _buildDetailRow(Icons.schedule, 'Berakhir', widget.job.tanggalPenerimaanLamaran ?? 'Tidak disebutkan'),
+          _buildDetailRow(Icons.school, 'Pendidikan', widget.job.jenjangPendidikan ?? 'Tidak disebutkan'),
           
           const SizedBox(height: 20),
           
@@ -310,7 +311,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
           ),
           const SizedBox(height: 15),
           Text(
-            'Kami mencari Software Developer yang berpengalaman untuk bergabung dengan tim pengembangan kami. Anda akan bertanggung jawab untuk mengembangkan aplikasi web dan mobile yang inovatif.',
+            widget.job.deskripsi,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],
@@ -354,34 +355,13 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
           const SizedBox(height: 15),
           
           Text(
-            'Kualifikasi:',
+            widget.job.rincianLowongan ?? 'Persyaratan tidak disebutkan',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
+              fontSize: 14,
+              color: Colors.grey[600],
+              height: 1.5,
             ),
           ),
-          const SizedBox(height: 10),
-          _buildBulletPoint('S1 Teknik Informatika atau bidang terkait'),
-          _buildBulletPoint('Minimal 2 tahun pengalaman sebagai Software Developer'),
-          _buildBulletPoint('Menguasai JavaScript, React, Node.js'),
-          _buildBulletPoint('Familiar dengan database MySQL/PostgreSQL'),
-          _buildBulletPoint('Memahami Git dan version control'),
-          
-          const SizedBox(height: 20),
-          Text(
-            'Keahlian Tambahan:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildBulletPoint('Pengalaman dengan cloud services (AWS, GCP)'),
-          _buildBulletPoint('Pengetahuan tentang DevOps dan CI/CD'),
-          _buildBulletPoint('Kemampuan komunikasi yang baik'),
-          _buildBulletPoint('Dapat bekerja dalam tim'),
         ],
       ),
     );
@@ -404,7 +384,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
           const SizedBox(height: 15),
           
           Text(
-            'PT. Teknologi Indonesia adalah perusahaan teknologi yang fokus pada pengembangan solusi digital inovatif. Didirikan pada tahun 2015, kami telah melayani lebih dari 500 klien di berbagai industri.',
+            widget.job.mitraPerusahaan?.namaPerusahaan ?? 'Perusahaan',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],
@@ -413,26 +393,10 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
           ),
           const SizedBox(height: 20),
           
-          _buildCompanyInfo('Industri', 'Teknologi Informasi'),
-          _buildCompanyInfo('Ukuran Perusahaan', '500+ Karyawan'),
-          _buildCompanyInfo('Lokasi', 'Jakarta, Indonesia'),
-          _buildCompanyInfo('Website', 'www.teknoindonesia.com'),
-          _buildCompanyInfo('Tahun Didirikan', '2015'),
-          
-          const SizedBox(height: 20),
-          Text(
-            'Keunggulan Perusahaan:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildBulletPoint('Tim yang berpengalaman dan profesional'),
-          _buildBulletPoint('Lingkungan kerja yang kolaboratif'),
-          _buildBulletPoint('Kesempatan pengembangan karir yang luas'),
-          _buildBulletPoint('Tunjangan dan benefit yang kompetitif'),
+          _buildCompanyInfo('Industri', widget.job.mitraPerusahaan?.sektor ?? 'Tidak disebutkan'),
+          _buildCompanyInfo('Lokasi', widget.job.lokasi),
+          _buildCompanyInfo('Website', widget.job.mitraPerusahaan?.tautan ?? 'Tidak disebutkan'),
+          _buildCompanyInfo('Kontak', widget.job.mitraPerusahaan?.kontak ?? 'Tidak disebutkan'),
         ],
       ),
     );
@@ -602,7 +566,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Lamar Lowongan'),
-        content: Text('Apakah Anda yakin ingin melamar untuk posisi ${widget.jobData['position']} di ${widget.jobData['company']}?'),
+        content: Text('Apakah Anda yakin ingin melamar untuk posisi ${widget.job.judul} di ${widget.job.mitraPerusahaan?.namaPerusahaan ?? 'Perusahaan'}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -629,5 +593,16 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Membagikan lowongan...')),
     );
+  }
+
+  String _formatSalary(String? min, String? max) {
+    if (min != null && max != null) {
+      return 'Rp $min - $max';
+    } else if (min != null) {
+      return 'Rp $min+';
+    } else if (max != null) {
+      return 'Rp $max';
+    }
+    return 'Gaji tidak disebutkan';
   }
 }

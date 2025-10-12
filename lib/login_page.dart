@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:math';
 import 'user/components/main_navigation.dart';
+import 'services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,13 +15,48 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  void _handleLogin() {
-    // Dummy login - langsung redirect ke main navigation
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    
+    final success = await authService.login(
+      _emailController.text.trim(),
+      _passwordController.text,
     );
+
+    if (success && mounted) {
+      // Check user role and navigate accordingly
+      if (authService.hasRole('alumni')) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
+        );
+      } else if (authService.hasRole('mitra')) {
+        // Navigate to mitra dashboard
+        Navigator.pushReplacementNamed(context, '/mitra');
+      } else {
+        // Show error for unsupported role
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Role tidak didukung untuk aplikasi mobile'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } else if (mounted) {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authService.error ?? 'Login gagal'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleGoogleLogin() {
@@ -108,224 +145,257 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildMainContent() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        children: [
-          // Main headline
-          Text(
-            'Langsung Kerja Gak Pake Ribet.',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A365D),
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // Sub headline
-          Text(
-            'Banyak lowongan menanti kamu!',
-            style: TextStyle(
-              fontSize: 18,
-              color: Color(0xFF4A5568),
-              height: 1.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 50),
-          
-          // Email input field
-          Container(
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
-              color: Colors.white,
-            ),
-            child: TextField(
-              controller: _emailController,
-              style: TextStyle(fontSize: 16),
-              decoration: InputDecoration(
-                hintText: 'Email',
-                hintStyle: TextStyle(
-                  color: Color(0xFFA0AEC0),
-                  fontSize: 16,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // Password input field
-          Container(
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
-              color: Colors.white,
-            ),
-            child: TextField(
-              controller: _passwordController,
-              obscureText: true,
-              style: TextStyle(fontSize: 16),
-              decoration: InputDecoration(
-                hintText: 'Password',
-                hintStyle: TextStyle(
-                  color: Color(0xFFA0AEC0),
-                  fontSize: 16,
-                ),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 30),
-          
-          // Login button
-          Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              color: Color(0xFF1A365D),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _handleLogin,
-                child: Center(
-                  child: Text(
-                    'Masuk',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 30),
-          
-          // ATAU separator
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 1,
-                  color: Color(0xFFE2E8F0),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'ATAU',
+    return Consumer<AuthService>(
+      builder: (context, authService, child) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Main headline
+                Text(
+                  'Langsung Kerja Gak Pake Ribet.',
                   style: TextStyle(
-                    color: Color(0xFFA0AEC0),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A365D),
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Sub headline
+                Text(
+                  'Banyak lowongan menanti kamu!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF4A5568),
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 50),
+                
+                // Email input field
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
+                    color: Colors.white,
+                  ),
+                  child: TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(fontSize: 16),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email tidak boleh kosong';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        return 'Format email tidak valid';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Email',
+                      hintStyle: TextStyle(
+                        color: Color(0xFFA0AEC0),
+                        fontSize: 16,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: Container(
-                  height: 1,
-                  color: Color(0xFFE2E8F0),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 30),
-          
-          // Google login button
-          Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
-              color: Colors.white,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _handleGoogleLogin,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Google logo
-                    Container(
-                      width: 24,
-                      height: 24,
-                      child: CustomPaint(
-                        painter: GoogleLogoPainter(),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'Masuk menggunakan Google',
-                      style: TextStyle(
-                        color: Color(0xFF4A5568),
+                
+                const SizedBox(height: 20),
+                
+                // Password input field
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
+                    color: Colors.white,
+                  ),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TextStyle(fontSize: 16),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Password tidak boleh kosong';
+                      }
+                      if (value.length < 6) {
+                        return 'Password minimal 6 karakter';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Password',
+                      hintStyle: TextStyle(
+                        color: Color(0xFFA0AEC0),
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 30),
+                
+                // Login button
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: authService.isLoading ? Color(0xFFA0AEC0) : Color(0xFF1A365D),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: authService.isLoading ? null : _handleLogin,
+                      child: Center(
+                        child: authService.isLoading
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Masuk',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          // Mitra link (single centered line)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Center(
-              child: RichText(
-                textAlign: TextAlign.center,
-                text: TextSpan(
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568)),
+                
+                const SizedBox(height: 30),
+                
+                // ATAU separator
+                Row(
                   children: [
-                    const TextSpan(text: 'Ingin merekrut kandidat? '),
-                    TextSpan(
-                      text: 'Masuk sebagai Perusahaan',
-                      style: const TextStyle(
-                        color: Color(0xFF0EA5E9),
-                        fontWeight: FontWeight.w700,
-                        decoration: TextDecoration.underline,
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: Color(0xFFE2E8F0),
                       ),
-                      recognizer: (TapGestureRecognizer()
-                        ..onTap = () {
-                          Navigator.pushNamed(context, '/mitra/login');
-                        }),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'ATAU',
+                        style: TextStyle(
+                          color: Color(0xFFA0AEC0),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: Color(0xFFE2E8F0),
+                      ),
                     ),
                   ],
                 ),
-              ),
+                
+                const SizedBox(height: 30),
+                
+                // Google login button
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Color(0xFFE2E8F0), width: 1.5),
+                    color: Colors.white,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: _handleGoogleLogin,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Google logo
+                          Container(
+                            width: 24,
+                            height: 24,
+                            child: CustomPaint(
+                              painter: GoogleLogoPainter(),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            'Masuk menggunakan Google',
+                            style: TextStyle(
+                              color: Color(0xFF4A5568),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Mitra link (single centered line)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Center(
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: const TextStyle(fontSize: 14, color: Color(0xFF4A5568)),
+                        children: [
+                          const TextSpan(text: 'Ingin merekrut kandidat? '),
+                          TextSpan(
+                            text: 'Masuk sebagai Perusahaan',
+                            style: const TextStyle(
+                              color: Color(0xFF0EA5E9),
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: (TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.pushNamed(context, '/mitra/login');
+                              }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-
 }
-
 
 class GoogleLogoPainter extends CustomPainter {
   @override
@@ -393,4 +463,3 @@ class GoogleLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

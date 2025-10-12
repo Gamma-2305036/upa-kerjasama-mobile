@@ -1,0 +1,150 @@
+class User {
+  final String id;
+  final String name;
+  final String email;
+  final List<String> roles;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.roles,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    // Handle both old format (roles array) and new format (role string)
+    List<String> rolesList = [];
+    if (json['roles'] != null) {
+      rolesList = List<String>.from(json['roles']);
+    } else if (json['role'] != null) {
+      rolesList = [json['role']];
+    }
+    
+    return User(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      roles: rolesList,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'roles': roles,
+    };
+  }
+}
+
+class AlumniProfile {
+  final String? id;
+  final String? nim;
+  final String? noHp;
+  final String? tempatLahir;
+  final String? tanggalLahir;
+  final String? jenisKelamin;
+  final String? alamat;
+  final String? kota;
+  final String? provinsi;
+  final String? kodePos;
+  final String? tentangSaya;
+  final String? namaBank;
+  final String? noRekening;
+  final String? fileCv;
+
+  AlumniProfile({
+    this.id,
+    this.nim,
+    this.noHp,
+    this.tempatLahir,
+    this.tanggalLahir,
+    this.jenisKelamin,
+    this.alamat,
+    this.kota,
+    this.provinsi,
+    this.kodePos,
+    this.tentangSaya,
+    this.namaBank,
+    this.noRekening,
+    this.fileCv,
+  });
+
+  factory AlumniProfile.fromJson(Map<String, dynamic> json) {
+    return AlumniProfile(
+      id: json['id'],
+      nim: json['nim'],
+      noHp: json['no_hp'],
+      tempatLahir: json['tempat_lahir'],
+      tanggalLahir: json['tanggal_lahir'],
+      jenisKelamin: json['jenis_kelamin'],
+      alamat: json['alamat'],
+      kota: json['kota'],
+      provinsi: json['provinsi'],
+      kodePos: json['kode_pos'],
+      tentangSaya: json['tentang_saya'],
+      namaBank: json['nama_bank'],
+      noRekening: json['no_rekening'],
+      fileCv: json['file_cv'],
+    );
+  }
+}
+
+class MitraProfile {
+  final String? id;
+  final String? namaPerusahaan;
+  final String? logo;
+  final String? sektor;
+  final String? kontak;
+  final String? tautan;
+  final String? mulaiKerjasama;
+  final String? akhirKerjasama;
+
+  MitraProfile({
+    this.id,
+    this.namaPerusahaan,
+    this.logo,
+    this.sektor,
+    this.kontak,
+    this.tautan,
+    this.mulaiKerjasama,
+    this.akhirKerjasama,
+  });
+
+  factory MitraProfile.fromJson(Map<String, dynamic> json) {
+    return MitraProfile(
+      id: json['id'],
+      namaPerusahaan: json['nama_perusahaan'],
+      logo: json['logo'],
+      sektor: json['sektor'],
+      kontak: json['kontak'],
+      tautan: json['tautan'],
+      mulaiKerjasama: json['mulai_kerjasama'],
+      akhirKerjasama: json['akhir_kerjasama'],
+    );
+  }
+}
+
+class AdminProfile {
+  final String? id;
+  final String? jabatan;
+  final String? noTelepon;
+  final String? alamat;
+
+  AdminProfile({
+    this.id,
+    this.jabatan,
+    this.noTelepon,
+    this.alamat,
+  });
+
+  factory AdminProfile.fromJson(Map<String, dynamic> json) {
+    return AdminProfile(
+      id: json['id'],
+      jabatan: json['jabatan'],
+      noTelepon: json['no_telepon'],
+      alamat: json['alamat'],
+    );
+  }
+}

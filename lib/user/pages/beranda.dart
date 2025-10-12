@@ -1,8 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../components/detail_lowongan_page.dart';
+import '../../services/job_service.dart';
+import '../../models/job_model.dart';
 
-class BerandaPage extends StatelessWidget {
+class BerandaPage extends StatefulWidget {
   const BerandaPage({super.key});
+
+  @override
+  State<BerandaPage> createState() => _BerandaPageState();
+}
+
+class _BerandaPageState extends State<BerandaPage> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Load jobs when page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<JobService>(context, listen: false).getJobs();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +88,12 @@ class BerandaPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(25),
                 ),
                 child: TextField(
+                  controller: _searchController,
+                  onSubmitted: (value) {
+                    if (value.isNotEmpty) {
+                      Provider.of<JobService>(context, listen: false).searchJobs(value);
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: 'Cari lowongan kerja...',
                     hintStyle: TextStyle(
@@ -73,6 +104,15 @@ class BerandaPage extends StatelessWidget {
                       Icons.search,
                       color: Colors.grey[600],
                     ),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: Colors.grey[600]),
+                            onPressed: () {
+                              _searchController.clear();
+                              Provider.of<JobService>(context, listen: false).clearFilters();
+                            },
+                          )
+                        : null,
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   ),
@@ -86,100 +126,148 @@ class BerandaPage extends StatelessWidget {
   }
 
   Widget _buildMainContent() {
-    return Container(
-      margin: const EdgeInsets.only(top: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            
-            // Title
-            Text(
-              'Lowongan Terbaru',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+    return Consumer<JobService>(
+      builder: (context, jobService, child) {
+        if (jobService.isLoading && jobService.jobs.isEmpty) {
+          return Container(
+            margin: const EdgeInsets.only(top: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(
                 color: Color(0xFF1A365D),
               ),
             ),
-            
-            const SizedBox(height: 20),
-            
-            // Cards list
-            Expanded(
-              child: ListView.builder(
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                  return _buildJobCard(context, index);
-                },
+          );
+        }
+
+        if (jobService.error != null && jobService.jobs.isEmpty) {
+          return Container(
+            margin: const EdgeInsets.only(top: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
               ),
             ),
-          ],
-        ),
-      ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Terjadi kesalahan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    jobService.error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      jobService.getJobs(refresh: true);
+                    },
+                    child: Text('Coba Lagi'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(top: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                
+                // Title
+                Text(
+                  'Lowongan Terbaru',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A365D),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Jobs list
+                Expanded(
+                  child: jobService.jobs.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.work_outline,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Tidak ada lowongan tersedia',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            await jobService.getJobs(refresh: true);
+                          },
+                          child: ListView.builder(
+                            itemCount: jobService.jobs.length,
+                            itemBuilder: (context, index) {
+                              return _buildJobCard(context, jobService.jobs[index]);
+                            },
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildJobCard(BuildContext context, int index) {
-    final jobs = [
-      {
-        'position': 'Software Developer',
-        'company': 'PT. Teknologi Indonesia',
-        'location': 'Jakarta',
-        'salary': 'Rp 8-12 Juta',
-        'type': 'Full Time',
-        'posted': '2 hari yang lalu',
-        'applicants': '45 pelamar',
-      },
-      {
-        'position': 'UI/UX Designer',
-        'company': 'CV. Digital Solutions',
-        'location': 'Bandung',
-        'salary': 'Rp 6-10 Juta',
-        'type': 'Full Time',
-        'posted': '1 hari yang lalu',
-        'applicants': '23 pelamar',
-      },
-      {
-        'position': 'Data Analyst',
-        'company': 'PT. Inovasi Kreatif',
-        'location': 'Surabaya',
-        'salary': 'Rp 7-11 Juta',
-        'type': 'Contract',
-        'posted': '3 hari yang lalu',
-        'applicants': '18 pelamar',
-      },
-      {
-        'position': 'Marketing Specialist',
-        'company': 'PT. Global Finance',
-        'location': 'Jakarta',
-        'salary': 'Rp 5-9 Juta',
-        'type': 'Full Time',
-        'posted': '4 hari yang lalu',
-        'applicants': '32 pelamar',
-      },
-      {
-        'position': 'Frontend Developer',
-        'company': 'PT. Media Digital',
-        'location': 'Yogyakarta',
-        'salary': 'Rp 6-10 Juta',
-        'type': 'Remote',
-        'posted': '5 hari yang lalu',
-        'applicants': '28 pelamar',
-      },
-    ];
-
-    final job = jobs[index % jobs.length];
-
+  Widget _buildJobCard(BuildContext context, Job job) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
@@ -198,7 +286,7 @@ class BerandaPage extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => DetailLowonganPage(jobData: job),
+                builder: (context) => DetailLowonganPage(job: job),
               ),
             );
           },
@@ -229,7 +317,7 @@ class BerandaPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            job['position']!,
+                            job.judul,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -238,7 +326,7 @@ class BerandaPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            job['company']!,
+                            job.mitraPerusahaan?.namaPerusahaan ?? 'Perusahaan',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -261,29 +349,53 @@ class BerandaPage extends StatelessWidget {
                       color: Colors.grey[600],
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      job['location']!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                    Expanded(
+                      child: Text(
+                        job.lokasi,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 20),
-                    Icon(
-                      Icons.attach_money,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      job['salary']!,
-                      style: TextStyle(
-                        fontSize: 14,
+                    if (job.gajiMin != null || job.gajiMax != null) ...[
+                      Icon(
+                        Icons.attach_money,
+                        size: 16,
                         color: Colors.grey[600],
                       ),
-                    ),
+                      const SizedBox(width: 5),
+                      Text(
+                        _formatSalary(job.gajiMin, job.gajiMax),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
+                
+                if (job.jenisPekerjaan != null) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.work,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        job.jenisPekerjaan!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 
                 const SizedBox(height: 15),
                 
@@ -312,5 +424,16 @@ class BerandaPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatSalary(String? min, String? max) {
+    if (min != null && max != null) {
+      return 'Rp $min - $max';
+    } else if (min != null) {
+      return 'Rp $min+';
+    } else if (max != null) {
+      return 'Rp $max';
+    }
+    return 'Gaji tidak disebutkan';
   }
 }
