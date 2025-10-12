@@ -6,6 +6,7 @@ import 'mitra/pages/mitra_login_page.dart';
 import 'mitra/components/main_navigation.dart';
 import 'services/auth_service.dart';
 import 'services/job_service.dart';
+import 'services/company_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,7 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProvider(create: (context) => JobService()),
+        ChangeNotifierProvider(create: (context) => CompanyService()),
       ],
       child: Consumer<AuthService>(
         builder: (context, authService, child) {

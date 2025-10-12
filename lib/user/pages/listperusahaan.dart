@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../components/detail_perusahaan_page.dart';
+import '../../services/company_service.dart';
+import '../../models/company_model.dart';
 
 class ListPerusahaanPage extends StatefulWidget {
   const ListPerusahaanPage({super.key});
@@ -11,6 +14,15 @@ class ListPerusahaanPage extends StatefulWidget {
 class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Load companies when page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CompanyService>(context, listen: false).loadCompanies();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +63,9 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
             children: [
               const SizedBox(height: 20),
               
-              // "Cari Perusahaan" text
+              // Title
               Text(
-                'Cari Perusahaan',
+                'List Perusahaan',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 28,
@@ -61,62 +73,61 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                 ),
               ),
               
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Temukan perusahaan impianmu',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 16,
+                ),
+              ),
+              
               const SizedBox(height: 20),
               
-              // Search bar dengan filter
+              // Search bar
               Container(
-                height: 54,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: Color(0xFF1A365D).withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 20),
-                      child: Icon(
-                        Icons.search,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _query = value.trim().toLowerCase();
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Cari nama perusahaan...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Color(0xFF1A365D).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Icon(
-                        Icons.tune,
-                        color: Color(0xFF1A365D),
-                        size: 20,
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: Offset(0, 2),
                     ),
                   ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      _query = value;
+                    });
+                    // Search companies with debounce
+                    Future.delayed(Duration(milliseconds: 500), () {
+                      if (_query == value) {
+                        Provider.of<CompanyService>(context, listen: false)
+                            .searchCompanies(value);
+                      }
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari perusahaan...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 16,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey[400],
+                      size: 24,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  ),
                 ),
               ),
             ],
@@ -136,33 +147,126 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
           topRight: Radius.circular(30),
         ),
       ),
+      child: Consumer<CompanyService>(
+        builder: (context, companyService, child) {
+          if (companyService.isLoading && companyService.companies.isEmpty) {
+            return _buildLoadingState();
+          }
+
+          if (companyService.error != null && companyService.companies.isEmpty) {
+            return _buildErrorState(companyService.error!);
+          }
+
+          if (companyService.companies.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          return _buildCompaniesList(companyService.companies);
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            color: Color(0xFF1A365D),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Memuat data perusahaan...',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 20),
-            
-            // Title
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[400],
+            ),
+            const SizedBox(height: 16),
             Text(
-              'Daftar Perusahaan',
+              'Terjadi kesalahan',
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A365D),
+                color: Colors.red[600],
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            
+            const SizedBox(height: 8),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
             const SizedBox(height: 20),
-            
-            // Company cards list
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 24),
-                itemCount: _filteredCompanies.length,
-                itemBuilder: (context, index) {
-                  return _buildCompanyCard(context, index);
-                },
+            ElevatedButton(
+              onPressed: () {
+                Provider.of<CompanyService>(context, listen: false).loadCompanies();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF1A365D),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.business_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada perusahaan',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Data perusahaan akan muncul di sini',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
               ),
             ),
           ],
@@ -171,243 +275,157 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
     );
   }
 
-  List<Map<String, String>> get _companies => [
-      {
-        'name': 'PT. Teknologi Indonesia',
-        'industry': 'Teknologi',
-        'location': 'Jakarta',
-        'employees': '500+ Karyawan',
-        'rating': '4.8',
-        'website': 'www.teknoindonesia.com',
-        'founded': '2015',
+  Widget _buildCompaniesList(List<Company> companies) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Provider.of<CompanyService>(context, listen: false).refreshCompanies();
       },
-      {
-        'name': 'CV. Digital Solutions',
-        'industry': 'IT Services',
-        'location': 'Bandung',
-        'employees': '100+ Karyawan',
-        'rating': '4.6',
-        'website': 'www.digitalsolutions.com',
-        'founded': '2018',
-      },
-      {
-        'name': 'PT. Inovasi Kreatif',
-        'industry': 'Marketing',
-        'location': 'Surabaya',
-        'employees': '200+ Karyawan',
-        'rating': '4.7',
-        'website': 'www.inovasikreatif.com',
-        'founded': '2016',
-      },
-      {
-        'name': 'PT. Global Finance',
-        'industry': 'Keuangan',
-        'location': 'Jakarta',
-        'employees': '1000+ Karyawan',
-        'rating': '4.9',
-        'website': 'www.globalfinance.com',
-        'founded': '2010',
-      },
-      {
-        'name': 'PT. Media Digital',
-        'industry': 'Media',
-        'location': 'Yogyakarta',
-        'employees': '150+ Karyawan',
-        'rating': '4.5',
-        'website': 'www.mediadigital.com',
-        'founded': '2017',
-      },
-      {
-        'name': 'CV. Startup Hub',
-        'industry': 'Startup',
-        'location': 'Bali',
-        'employees': '50+ Karyawan',
-        'rating': '4.4',
-        'website': 'www.startuphub.com',
-        'founded': '2019',
-      },
-      {
-        'name': 'PT. E-commerce Plus',
-        'industry': 'E-commerce',
-        'location': 'Jakarta',
-        'employees': '300+ Karyawan',
-        'rating': '4.8',
-        'website': 'www.ecommerceplus.com',
-        'founded': '2014',
-      },
-      {
-        'name': 'PT. Konsultan Pro',
-        'industry': 'Konsultan',
-        'location': 'Medan',
-        'employees': '80+ Karyawan',
-        'rating': '4.6',
-        'website': 'www.konsultanpro.com',
-        'founded': '2012',
-      },
-    ];
+      child: ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: companies.length,
+        itemBuilder: (context, index) {
+          final company = companies[index];
+          return _buildCompanyCard(company);
+        },
+      ),
+    );
+  }
 
-    List<Map<String, String>> get _filteredCompanies {
-      if (_query.isEmpty) return _companies;
-      return _companies
-          .where((c) => (c['name']!.toLowerCase().contains(_query) || c['industry']!.toLowerCase().contains(_query)))
-          .toList();
-    }
-
-  Widget _buildCompanyCard(BuildContext context, int index) {
-    final company = _filteredCompanies[index % _filteredCompanies.length];
-
+  Widget _buildCompanyCard(Company company) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(16),
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => DetailPerusahaanPage(companyData: company),
+                builder: (context) => DetailPerusahaanPage(companyData: company.toJson()),
               ),
             );
           },
           child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                // Company info
-                Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF1A365D).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Icon(
-                        Icons.business,
-                        color: Color(0xFF1A365D),
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            company['name']!,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A365D),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            company['industry']!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Rating
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.star,
-                            size: 14,
-                            color: Colors.orange[600],
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            company['rating']!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.orange[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 15),
-                
-                // Company details
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      company['location']!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Icon(
-                      Icons.people,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      company['employees']!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 15),
-                
-                // View button
+                // Company logo
                 Container(
-                  width: double.infinity,
-                  height: 40,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: Color(0xFF1A365D),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Color(0xFF1A365D).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Text(
-                      'Lihat Detail',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                  child: company.logo != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            company.logo!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.business,
+                                color: Color(0xFF1A365D),
+                                size: 30,
+                              );
+                            },
+                          ),
+                        )
+                      : Icon(
+                          Icons.business,
+                          color: Color(0xFF1A365D),
+                          size: 30,
+                        ),
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // Company info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        company.namaPerusahaan,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A365D),
+                        ),
                       ),
-                    ),
+                      
+                      if (company.sektor != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          company.sektor!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                      
+                      if (company.kontak != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.phone,
+                              size: 14,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              company.kontak!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 8),
+                      
+                      // Job count
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF1A365D).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${company.lowongan.length} lowongan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF1A365D),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                
+                // Arrow icon
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.grey[400],
+                  size: 16,
                 ),
               ],
             ),
@@ -415,5 +433,11 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }

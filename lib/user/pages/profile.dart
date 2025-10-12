@@ -401,17 +401,61 @@ class ProfilePage extends StatelessWidget {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                // Logout using AuthService
-                final authService = Provider.of<AuthService>(context, listen: false);
-                await authService.logout();
                 
-                // Fallback: Force navigation to login page if state management doesn't work
-                if (context.mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                    (route) => false,
-                  );
+                // Show loading dialog
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Logging out...'),
+                      ],
+                    ),
+                  ),
+                );
+                
+                try {
+                  // Logout using AuthService
+                  final authService = Provider.of<AuthService>(context, listen: false);
+                  await authService.logout();
+                  
+                  // Close loading dialog
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  // Force navigation to login page
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  // Close loading dialog
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  // Show error and still navigate to login
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Logout berhasil'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      (route) => false,
+                    );
+                  }
                 }
               },
               child: Text(

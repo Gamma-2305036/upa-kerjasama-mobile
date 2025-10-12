@@ -190,6 +190,64 @@ class ApiService {
     }
   }
 
+  // Get companies list
+  static Future<Map<String, dynamic>> getCompanies({String? search}) async {
+    try {
+      String url = '$baseUrl/companies';
+      
+      if (search != null && search.isNotEmpty) {
+        url += '?search=${Uri.encodeComponent(search)}';
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: _getHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data perusahaan',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get company detail
+  static Future<Map<String, dynamic>> getCompanyDetail(String companyId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/companies/$companyId'),
+        headers: _getHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil detail perusahaan',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
   // Check if user is logged in
   static bool isLoggedIn() {
     return _token != null;
