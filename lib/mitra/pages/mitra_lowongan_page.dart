@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/job_service.dart';
 
-class MitraLowonganPage extends StatelessWidget {
+class MitraLowonganPage extends StatefulWidget {
   const MitraLowonganPage({super.key});
+
+  @override
+  State<MitraLowonganPage> createState() => _MitraLowonganPageState();
+}
+
+class _MitraLowonganPageState extends State<MitraLowonganPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,50 +86,82 @@ class MitraLowonganPage extends StatelessWidget {
   Widget _buildContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: ListView.separated(
-        itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[200]!, width: 1),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const _DetailLowonganPage()),
-                );
-              },
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A365D).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.work_outline, color: Color(0xFF1A365D)),
+      child: Consumer<JobService>(
+        builder: (context, jobService, child) {
+          if (jobService.isLoading && jobService.jobs.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)));
+          }
+
+          if (jobService.error != null && jobService.jobs.isEmpty) {
+            return Center(
+              child: Text(jobService.error!, style: TextStyle(color: Colors.grey[600])),
+            );
+          }
+
+          if (jobService.jobs.isEmpty) {
+            return Center(
+              child: Text('Belum ada lowongan', style: TextStyle(color: Colors.grey[600])),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true);
+            },
+            child: ListView.separated(
+              itemCount: jobService.jobs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final job = jobService.jobs[index];
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[200]!, width: 1),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const _DetailLowonganPage()),
+                      );
+                    },
+                    child: Row(
                       children: [
-                        Text('Frontend Developer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
-                        SizedBox(height: 4),
-                        Text('12 pelamar • 3 hari lagi', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A365D).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.work_outline, color: Color(0xFF1A365D)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                job.judul,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D)),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                job.lokasi ?? '-',
+                                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: Colors.grey[400]),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, color: Colors.grey[400]),
-                ],
-              ),
+                );
+              },
             ),
           );
         },

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 
 class MitraProfilPage extends StatelessWidget {
   const MitraProfilPage({super.key});
@@ -127,9 +129,12 @@ class MitraProfilPage extends StatelessWidget {
                           child: Text('Batal', style: TextStyle(color: Colors.grey[700])),
                         ),
                         TextButton(
-                          onPressed: () {
+                          onPressed: () async {
                             Navigator.of(ctx).pop();
-                            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                            await Provider.of<AuthService>(context, listen: false).logout();
+                            if (context.mounted) {
+                              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                            }
                           },
                           child: const Text('Keluar', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
                         ),

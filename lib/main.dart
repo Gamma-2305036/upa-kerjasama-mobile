@@ -39,8 +39,10 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
               useMaterial3: true,
             ),
-            home: authService.isLoggedIn 
-                ? const MainNavigationWrapper() 
+            home: authService.isLoggedIn
+                ? (authService.hasRole('mitra')
+                    ? const MitraMainNavigation()
+                    : const MainNavigationWrapper())
                 : const LoginPage(),
             routes: {
               '/main': (context) => const MainNavigationWrapper(),

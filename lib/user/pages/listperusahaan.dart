@@ -27,6 +27,7 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.grey[100],
       body: Column(
         children: [
@@ -44,7 +45,7 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
 
   Widget _buildHeader() {
     return Container(
-      height: 200,
+      height: 220,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -58,7 +59,9 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
@@ -134,7 +137,8 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildMainContent() {
@@ -281,7 +285,12 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
         await Provider.of<CompanyService>(context, listen: false).refreshCompanies();
       },
       child: ListView.builder(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
         itemCount: companies.length,
         itemBuilder: (context, index) {
           final company = companies[index];

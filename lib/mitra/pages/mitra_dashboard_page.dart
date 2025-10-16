@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/job_service.dart';
 
-class MitraDashboardPage extends StatelessWidget {
+class MitraDashboardPage extends StatefulWidget {
   const MitraDashboardPage({super.key});
+
+  @override
+  State<MitraDashboardPage> createState() => _MitraDashboardPageState();
+}
+
+class _MitraDashboardPageState extends State<MitraDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,64 +111,46 @@ class MitraDashboardPage extends StatelessWidget {
   Widget _buildContent() {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
+      child: Consumer<JobService>(
+        builder: (context, jobService, child) {
+          final lowonganAktif = jobService.jobs.length;
+          final totalPelamar = 0; // belum ada endpoint pelamar
+          final tahapInterview = 0; // belum ada endpoint status
+          final diterima = 0; // belum ada endpoint status
+
+          return Column(
             children: [
-              _buildStatCard(icon: Icons.work_outline, title: 'Lowongan Aktif', value: '4'),
-              const SizedBox(width: 12),
-              _buildStatCard(icon: Icons.person_outline, title: 'Total Pelamar', value: '127', color: Colors.teal),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildStatCard(icon: Icons.check_circle_outline, title: 'Tahap Interview', value: '9', color: Colors.orange),
-              const SizedBox(width: 12),
-              _buildStatCard(icon: Icons.done_all_outlined, title: 'Diterima', value: '3', color: Colors.purple),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Aktivitas Terbaru', style: TextStyle(color: const Color(0xFF1A365D), fontSize: 16, fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: ListView.separated(
-              itemCount: 6,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[200]!, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A365D).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+              Row(
+                children: [
+                  _buildStatCard(icon: Icons.work_outline, title: 'Lowongan Aktif', value: '$lowonganAktif'),
+                  const SizedBox(width: 12),
+                  _buildStatCard(icon: Icons.person_outline, title: 'Total Pelamar', value: '$totalPelamar', color: Colors.teal),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _buildStatCard(icon: Icons.check_circle_outline, title: 'Tahap Interview', value: '$tahapInterview', color: Colors.orange),
+                  const SizedBox(width: 12),
+                  _buildStatCard(icon: Icons.done_all_outlined, title: 'Diterima', value: '$diterima', color: Colors.purple),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Aktivitas Terbaru', style: TextStyle(color: const Color(0xFF1A365D), fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: jobService.isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
+                    : Center(
+                        child: Text('Belum ada aktivitas', style: TextStyle(color: Colors.grey[600])),
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text('Pelamar baru untuk Frontend Developer', style: TextStyle(fontSize: 14)),
-                      ),
-                      Text('2m', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

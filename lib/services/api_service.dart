@@ -228,6 +228,39 @@ class ApiService {
     }
   }
 
+  // Get jobs owned by the logged-in mitra
+  static Future<Map<String, dynamic>> getMyJobs() async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/mitra/jobs'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success']) {
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal mengambil data lowongan mitra',
+        };
+      }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan data lowongan mitra timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
   // Get companies list
   static Future<Map<String, dynamic>> getCompanies({String? search}) async {
     try {

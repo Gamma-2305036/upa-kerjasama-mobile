@@ -1,3 +1,4 @@
+import 'dart:convert';
 class Company {
   final String id;
   final String userId;
@@ -28,6 +29,23 @@ class Company {
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
+    List<dynamic> _normalizeLowongan(dynamic v) {
+      if (v == null) return [];
+      if (v is List) return v;
+      if (v is Map) return v.values.toList();
+      if (v is String) {
+        try {
+          final decoded = jsonDecode(v);
+          if (decoded is List) return decoded;
+          if (decoded is Map) return decoded.values.toList();
+        } catch (_) {}
+        return [];
+      }
+      return [];
+    }
+
+    final lowonganRaw = _normalizeLowongan(json['lowongan']);
+
     return Company(
       id: json['id'] ?? '',
       userId: json['user_id'] ?? '',
@@ -40,9 +58,7 @@ class Company {
       akhirKerjasama: json['akhir_kerjasama'],
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
-      lowongan: (json['lowongan'] as List<dynamic>?)
-          ?.map((job) => Job.fromJson(job))
-          .toList() ?? [],
+      lowongan: lowonganRaw.map((job) => Job.fromJson(Map<String, dynamic>.from(job))).toList(),
     );
   }
 
@@ -116,6 +132,40 @@ class Job {
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
+    int? _toInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is String) {
+        final s = v.replaceAll('.', '').replaceAll(',', '').trim();
+        return int.tryParse(s);
+      }
+      return null;
+    }
+
+    bool _toBool(dynamic v) {
+      if (v is bool) return v;
+      if (v is int) return v != 0;
+      if (v is String) return v == '1' || v.toLowerCase() == 'true';
+      return false;
+    }
+
+    List<String>? _toStringList(dynamic v) {
+      if (v == null) return null;
+      if (v is List) {
+        return v.map((e) => e.toString()).toList();
+      }
+      if (v is String) {
+        try {
+          final decoded = jsonDecode(v);
+          if (decoded is List) {
+            return decoded.map((e) => e.toString()).toList();
+          }
+        } catch (_) {}
+        return [v];
+      }
+      return null;
+    }
+
     return Job(
       id: json['id'] ?? '',
       mitraId: json['mitra_id'] ?? '',
@@ -127,23 +177,17 @@ class Job {
       tanggalSelesai: json['tanggal_selesai'],
       jenisPekerjaan: json['jenis_pekerjaan'],
       jenjangPendidikan: json['jenjang_pendidikan'],
-      jurusanDiizinkan: json['jurusan_diizinkan'] != null 
-          ? List<String>.from(json['jurusan_diizinkan']) 
-          : null,
-      persyaratanDokumen: json['persyaratan_dokumen'] != null 
-          ? List<String>.from(json['persyaratan_dokumen']) 
-          : null,
+      jurusanDiizinkan: _toStringList(json['jurusan_diizinkan']),
+      persyaratanDokumen: _toStringList(json['persyaratan_dokumen']),
       rincianLowongan: json['rincian_lowongan'],
-      jumlahPelamar: json['jumlah_pelamar'] ?? 0,
-      statusAktif: json['status_aktif'] ?? false,
+      jumlahPelamar: _toInt(json['jumlah_pelamar']) ?? 0,
+      statusAktif: _toBool(json['status_aktif']),
       tanggalPenerimaanLamaran: json['tanggal_penerimaan_lamaran'],
       tanggalPengumuman: json['tanggal_pengumuman'],
-      gajiMin: json['gaji_min'],
-      gajiMax: json['gaji_max'],
+      gajiMin: _toInt(json['gaji_min']),
+      gajiMax: _toInt(json['gaji_max']),
       pengalamanMinimal: json['pengalaman_minimal'],
-      skillRequired: json['skill_required'] != null 
-          ? List<String>.from(json['skill_required']) 
-          : null,
+      skillRequired: _toStringList(json['skill_required']),
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
     );

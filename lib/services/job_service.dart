@@ -13,7 +13,7 @@ class JobService extends ChangeNotifier {
   String? get error => _error;
   Map<String, dynamic>? get pagination => _pagination;
 
-  // Get jobs list
+  // Get jobs list (public)
   Future<void> getJobs({String? search, String? lokasi, bool refresh = false}) async {
     if (refresh) {
       _jobs.clear();
@@ -29,6 +29,33 @@ class JobService extends ChangeNotifier {
         final List<dynamic> jobsData = result['data'];
         _jobs = jobsData.map((job) => Job.fromJson(job)).toList();
         _pagination = result['pagination'];
+        notifyListeners();
+      } else {
+        _setError(result['message']);
+      }
+    } catch (e) {
+      _setError('Terjadi kesalahan: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get jobs for current mitra only
+  Future<void> getMyJobs({bool refresh = false}) async {
+    if (refresh) {
+      _jobs.clear();
+    }
+
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await ApiService.getMyJobs();
+
+      if (result['success']) {
+        final List<dynamic> jobsData = result['data'];
+        _jobs = jobsData.map((job) => Job.fromJson(job)).toList();
+        _pagination = null;
         notifyListeners();
       } else {
         _setError(result['message']);
