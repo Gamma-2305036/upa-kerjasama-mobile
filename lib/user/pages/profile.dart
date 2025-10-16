@@ -365,9 +365,10 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    final outerContext = context; // preserve page context
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
+      context: outerContext,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -400,13 +401,13 @@ class ProfilePage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 
                 // Show loading dialog
                 showDialog(
-                  context: context,
+                  context: outerContext,
                   barrierDismissible: false,
-                  builder: (context) => AlertDialog(
+                  builder: (loadingDialogContext) => AlertDialog(
                     content: Row(
                       children: [
                         CircularProgressIndicator(),
@@ -419,31 +420,31 @@ class ProfilePage extends StatelessWidget {
                 
                 try {
                   // Logout using AuthService
-                  final authService = Provider.of<AuthService>(context, listen: false);
+                  final authService = Provider.of<AuthService>(outerContext, listen: false);
                   await authService.logout();
                   
                   // Close loading dialog
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
+                  if (outerContext.mounted) {
+                    Navigator.of(outerContext).pop();
                   }
                   
                   // Force navigation to login page
-                  if (context.mounted) {
+                  if (outerContext.mounted) {
                     Navigator.pushAndRemoveUntil(
-                      context,
+                      outerContext,
                       MaterialPageRoute(builder: (context) => const LoginPage()),
                       (route) => false,
                     );
                   }
                 } catch (e) {
                   // Close loading dialog
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
+                  if (outerContext.mounted) {
+                    Navigator.of(outerContext).pop();
                   }
                   
                   // Show error and still navigate to login
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  if (outerContext.mounted) {
+                    ScaffoldMessenger.of(outerContext).showSnackBar(
                       SnackBar(
                         content: Text('Logout berhasil'),
                         backgroundColor: Colors.green,
@@ -451,7 +452,7 @@ class ProfilePage extends StatelessWidget {
                     );
                     
                     Navigator.pushAndRemoveUntil(
-                      context,
+                      outerContext,
                       MaterialPageRoute(builder: (context) => const LoginPage()),
                       (route) => false,
                     );

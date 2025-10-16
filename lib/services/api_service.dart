@@ -1,10 +1,11 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
 class ApiService {
-  static const String baseUrl = ApiConfig.baseUrl;
+  static String get baseUrl => ApiConfig.baseUrl;
   static String? _token;
 
   // Initialize token from shared preferences
@@ -44,14 +45,16 @@ class ApiService {
   // Login
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final response = await http.post(
+      final response = await http
+          .post(
         Uri.parse('$baseUrl/login'),
         headers: _getHeaders(),
         body: jsonEncode({
           'email': email,
           'password': password,
         }),
-      );
+      )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
       
@@ -65,6 +68,11 @@ class ApiService {
           'message': data['message'] ?? 'Login gagal',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan login timeout. Periksa koneksi Anda.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -76,10 +84,12 @@ class ApiService {
   // Logout
   static Future<Map<String, dynamic>> logout() async {
     try {
-      final response = await http.post(
+      final response = await http
+          .post(
         Uri.parse('$baseUrl/logout'),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
       final data = jsonDecode(response.body);
       
@@ -87,6 +97,13 @@ class ApiService {
       await removeToken();
       
       return data;
+    } on TimeoutException {
+      // On timeout, still remove token and consider as logged out locally
+      await removeToken();
+      return {
+        'success': false,
+        'message': 'Permintaan logout timeout. Anda telah keluar dari perangkat.',
+      };
     } catch (e) {
       // Remove token even if request fails
       await removeToken();
@@ -100,10 +117,12 @@ class ApiService {
   // Get user profile
   static Future<Map<String, dynamic>> getProfile() async {
     try {
-      final response = await http.get(
+      final response = await http
+          .get(
         Uri.parse('$baseUrl/profile'),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
       
@@ -115,6 +134,11 @@ class ApiService {
           'message': data['message'] ?? 'Gagal mengambil profil',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan profil timeout. Coba lagi nanti.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -141,10 +165,12 @@ class ApiService {
         url += '?${params.join('&')}';
       }
 
-      final response = await http.get(
+      final response = await http
+          .get(
         Uri.parse(url),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 20));
 
       final data = jsonDecode(response.body);
       
@@ -156,6 +182,11 @@ class ApiService {
           'message': data['message'] ?? 'Gagal mengambil data lowongan',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan data lowongan timeout. Coba lagi.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -167,10 +198,12 @@ class ApiService {
   // Get job detail
   static Future<Map<String, dynamic>> getJobDetail(String jobId) async {
     try {
-      final response = await http.get(
+      final response = await http
+          .get(
         Uri.parse('$baseUrl/jobs/$jobId'),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
       
@@ -182,6 +215,11 @@ class ApiService {
           'message': data['message'] ?? 'Gagal mengambil detail lowongan',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan detail lowongan timeout. Coba lagi.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -199,10 +237,12 @@ class ApiService {
         url += '?search=${Uri.encodeComponent(search)}';
       }
 
-      final response = await http.get(
+      final response = await http
+          .get(
         Uri.parse(url),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 20));
 
       final data = jsonDecode(response.body);
       
@@ -214,6 +254,11 @@ class ApiService {
           'message': data['message'] ?? 'Gagal mengambil data perusahaan',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan data perusahaan timeout. Coba lagi.',
+      };
     } catch (e) {
       return {
         'success': false,
@@ -225,10 +270,12 @@ class ApiService {
   // Get company detail
   static Future<Map<String, dynamic>> getCompanyDetail(String companyId) async {
     try {
-      final response = await http.get(
+      final response = await http
+          .get(
         Uri.parse('$baseUrl/companies/$companyId'),
         headers: _getHeaders(),
-      );
+      )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
       
@@ -240,6 +287,11 @@ class ApiService {
           'message': data['message'] ?? 'Gagal mengambil detail perusahaan',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan detail perusahaan timeout. Coba lagi.',
+      };
     } catch (e) {
       return {
         'success': false,

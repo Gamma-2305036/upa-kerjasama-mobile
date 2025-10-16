@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../components/main_navigation.dart';
+import '../../services/auth_service.dart';
 
 class MitraLoginPage extends StatefulWidget {
   const MitraLoginPage({super.key});
@@ -11,12 +13,42 @@ class MitraLoginPage extends StatefulWidget {
 class _MitraLoginPageState extends State<MitraLoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isSubmitting = false;
 
-  void _handleLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MitraMainNavigation()),
+  Future<void> _handleLogin() async {
+    if (_isSubmitting) return;
+    setState(() { _isSubmitting = true; });
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final success = await authService.login(
+      _emailController.text.trim(),
+      _passwordController.text,
     );
+
+    if (!mounted) return;
+
+    if (success && authService.hasRole('mitra')) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MitraMainNavigation()),
+      );
+    } else if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akun ini bukan mitra. Gunakan login alumni atau admin sesuai peran.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authService.error ?? 'Login mitra gagal'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    setState(() { _isSubmitting = false; });
   }
 
   @override
@@ -96,22 +128,31 @@ class _MitraLoginPageState extends State<MitraLoginPage> {
                 height: 56,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: const Color(0xFF1A365D),
+                  color: _isSubmitting ? const Color(0xFFA0AEC0) : const Color(0xFF1A365D),
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
-                    onTap: _handleLogin,
-                    child: const Center(
-                      child: Text(
-                        'Masuk sebagai Mitra',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    onTap: _isSubmitting ? null : _handleLogin,
+                    child: Center(
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Masuk sebagai Mitra',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ),
