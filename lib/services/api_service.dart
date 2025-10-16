@@ -261,6 +261,65 @@ class ApiService {
     }
   }
 
+  // Create job (mitra)
+  static Future<Map<String, dynamic>> createJob(Map<String, dynamic> payload) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/mitra/jobs'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal membuat lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Delete job (mitra)
+  static Future<Map<String, dynamic>> deleteJob(String jobId) async {
+    try {
+      final response = await http
+          .delete(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal menghapus lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Update job status/expiry
+  static Future<Map<String, dynamic>> updateJobStatus(String jobId, {bool? statusAktif, String? tanggalSelesai}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (statusAktif != null) body['status_aktif'] = statusAktif;
+      if (tanggalSelesai != null) body['tanggal_selesai'] = tanggalSelesai;
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId/status'),
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal memperbarui status lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
   // Get companies list
   static Future<Map<String, dynamic>> getCompanies({String? search}) async {
     try {
@@ -333,8 +392,74 @@ class ApiService {
     }
   }
 
+  // Update mitra company profile
+  static Future<Map<String, dynamic>> updateCompanyProfile(Map<String, dynamic> payload) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/mitra/company'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal memperbarui profil perusahaan',
+        };
+      }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan update profil perusahaan timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
   // Check if user is logged in
   static bool isLoggedIn() {
     return _token != null;
+  }
+
+  // Update alumni profile (basic fields)
+  static Future<Map<String, dynamic>> updateAlumniProfile(Map<String, dynamic> payload) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/alumni/profile'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui profil alumni',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan update profil alumni timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
   }
 }

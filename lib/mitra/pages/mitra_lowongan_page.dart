@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/job_service.dart';
+import '../../services/api_service.dart';
 
 class MitraLowonganPage extends StatefulWidget {
   const MitraLowonganPage({super.key});
@@ -125,7 +126,7 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const _DetailLowonganPage()),
+                        MaterialPageRoute(builder: (_) => _DetailLowonganPage(jobId: job.id)),
                       );
                     },
                     child: Row(
@@ -156,7 +157,41 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: Colors.grey[400]),
+                        PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'delete') {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Hapus Lowongan'),
+                                  content: const Text('Yakin ingin menghapus lowongan ini?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus')),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                final res = await Provider.of<JobService>(context, listen: false).deleteJob(job.id);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dihapus')));
+                                }
+                              }
+                            } else if (value == 'expire') {
+                              final today = DateTime.now();
+                              final dateStr = today.toIso8601String().split('T').first;
+                              final res = await Provider.of<JobService>(context, listen: false).updateJobStatus(job.id, statusAktif: false, tanggalSelesai: dateStr);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
+                              }
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            const PopupMenuItem(value: 'expire', child: Text('Tandai Kadaluarsa')),
+                            const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
+                          ],
+                          icon: Icon(Icons.more_vert, color: Colors.grey[400]),
+                        ),
                       ],
                     ),
                   ),
@@ -170,8 +205,25 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
   }
 }
 
-class _BuatLowonganPage extends StatelessWidget {
+class _BuatLowonganPage extends StatefulWidget {
   const _BuatLowonganPage({super.key});
+
+  @override
+  State<_BuatLowonganPage> createState() => _BuatLowonganPageState();
+}
+
+class _BuatLowonganPageState extends State<_BuatLowonganPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _judul = TextEditingController();
+  final _posisi = TextEditingController();
+  final _lokasi = TextEditingController();
+  final _gajiMin = TextEditingController();
+  final _gajiMax = TextEditingController();
+  final _deskripsi = TextEditingController();
+  final _jenis = TextEditingController();
+  final _pendidikan = TextEditingController();
+  final _persyaratan = TextEditingController();
+  DateTime? _tanggalSelesai;
 
   @override
   Widget build(BuildContext context) {
@@ -185,17 +237,36 @@ class _BuatLowonganPage extends StatelessWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Column(
-            children: [
-              _input('Posisi'),
-              const SizedBox(height: 12),
-              _input('Lokasi'),
-              const SizedBox(height: 12),
-              _input('Gaji (opsional)'),
-              const SizedBox(height: 12),
-              _input('Deskripsi', maxLines: 5),
-              const SizedBox(height: 20),
-            ],
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _input(controller: _judul, label: 'Judul Lowongan', validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+                const SizedBox(height: 12),
+                _input(controller: _posisi, label: 'Posisi'),
+                const SizedBox(height: 12),
+                _input(controller: _lokasi, label: 'Lokasi'),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: _input(controller: _gajiMin, label: 'Gaji Min', keyboardType: TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _input(controller: _gajiMax, label: 'Gaji Max', keyboardType: TextInputType.number)),
+                ]),
+                const SizedBox(height: 12),
+                _input(controller: _deskripsi, label: 'Deskripsi', maxLines: 5, validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+                const SizedBox(height: 12),
+                _input(controller: _jenis, label: 'Jenis Pekerjaan (Full Time/Part Time/Kontrak)')
+                ,
+                const SizedBox(height: 12),
+                _input(controller: _pendidikan, label: 'Jenjang Pendidikan (SMA/D3/S1)')
+                ,
+                const SizedBox(height: 12),
+                _input(controller: _persyaratan, label: 'Persyaratan (pisahkan dengan ";")', maxLines: 3),
+                const SizedBox(height: 12),
+                _datePicker(context),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -213,8 +284,24 @@ class _BuatLowonganPage extends StatelessWidget {
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                  onPressed: () {
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
+                    final payload = {
+                      'judul': _judul.text.trim(),
+                      'posisi': _posisi.text.trim(),
+                      'lokasi': _lokasi.text.trim(),
+                      'gaji_min': int.tryParse(_gajiMin.text.trim()),
+                      'gaji_max': int.tryParse(_gajiMax.text.trim()),
+                      'deskripsi': _deskripsi.text.trim(),
+                      'jenis_pekerjaan': _jenis.text.trim().isEmpty ? null : _jenis.text.trim(),
+                      'jenjang_pendidikan': _pendidikan.text.trim().isEmpty ? null : _pendidikan.text.trim(),
+                      'rincian_lowongan': _persyaratan.text.trim().isEmpty ? null : _persyaratan.text.trim(),
+                      'tanggal_selesai': _tanggalSelesai != null ? _tanggalSelesai!.toIso8601String().split('T').first : null,
+                    };
+                    final res = await Provider.of<JobService>(context, listen: false).createJob(payload);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Tersimpan')));
+                    if (res['success'] == true) Navigator.pop(context);
                   },
                   child: const Text('Simpan Lowongan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                 ),
@@ -226,19 +313,45 @@ class _BuatLowonganPage extends StatelessWidget {
     );
   }
 
-  Widget _input(String hint, {int maxLines = 1}) {
+  Widget _input({required TextEditingController controller, required String label, int maxLines = 1, TextInputType? keyboardType, String? Function(String?)? validator}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: TextField(
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
         maxLines: maxLines,
+        validator: validator,
         decoration: InputDecoration(
-          hintText: hint,
+          labelText: label,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _datePicker(BuildContext context) {
+    final label = _tanggalSelesai == null ? 'Tanggal Selesai (kadaluarsa)' : _tanggalSelesai!.toIso8601String().split('T').first;
+    return InkWell(
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(context: context, initialDate: now, firstDate: now, lastDate: DateTime(now.year + 3));
+        if (picked != null) setState(() => _tanggalSelesai = picked);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE2E8F0))),
+        child: Row(
+          children: [
+            const Icon(Icons.event, color: Color(0xFF1A365D)),
+            const SizedBox(width: 10),
+            Text(label),
+          ],
         ),
       ),
     );
@@ -246,7 +359,8 @@ class _BuatLowonganPage extends StatelessWidget {
 }
 
 class _DetailLowonganPage extends StatelessWidget {
-  const _DetailLowonganPage({super.key});
+  final String jobId;
+  const _DetailLowonganPage({super.key, required this.jobId});
 
   @override
   Widget build(BuildContext context) {

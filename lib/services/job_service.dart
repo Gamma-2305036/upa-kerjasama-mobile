@@ -67,6 +67,46 @@ class JobService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> createJob(Map<String, dynamic> payload) async {
+    try {
+      _setLoading(true);
+      final result = await ApiService.createJob(payload);
+      if (result['success'] == true) {
+        await getMyJobs(refresh: true);
+      } else {
+        _setError(result['message'] ?? 'Gagal membuat lowongan');
+      }
+      return result;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteJob(String jobId) async {
+    try {
+      _setLoading(true);
+      final result = await ApiService.deleteJob(jobId);
+      if (result['success'] == true) {
+        await getMyJobs(refresh: true);
+      } else {
+        _setError(result['message'] ?? 'Gagal menghapus lowongan');
+      }
+      return result;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateJobStatus(String jobId, {bool? statusAktif, String? tanggalSelesai}) async {
+    final result = await ApiService.updateJobStatus(jobId, statusAktif: statusAktif, tanggalSelesai: tanggalSelesai);
+    if (result['success'] == true) {
+      await getMyJobs(refresh: true);
+    } else {
+      _setError(result['message'] ?? 'Gagal memperbarui status lowongan');
+    }
+    return result;
+  }
+
   // Get job detail
   Future<Job?> getJobDetail(String jobId) async {
     _setLoading(true);

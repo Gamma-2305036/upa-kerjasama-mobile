@@ -128,7 +128,10 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
                 ),
                 const SizedBox(height: 15),
                 Text(
-                  widget.companyData['name'] ?? 'PT. Teknologi Indonesia',
+                  // Prefer backend `nama_perusahaan`, fallback to generic keys or placeholder
+                  widget.companyData['nama_perusahaan'] ??
+                      widget.companyData['name'] ??
+                      'Perusahaan',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -138,7 +141,10 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  widget.companyData['industry'] ?? 'Teknologi',
+                  // Prefer backend `sektor`
+                  widget.companyData['sektor'] ??
+                      widget.companyData['industry'] ??
+                      'Industri tidak ditentukan',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 16,
@@ -194,11 +200,28 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
       child: Column(
         children: [
           // Company Details
-          _buildDetailRow(Icons.location_on, 'Lokasi', widget.companyData['location'] ?? 'Jakarta'),
-          _buildDetailRow(Icons.people, 'Karyawan', widget.companyData['employees'] ?? '500+ Karyawan'),
-          _buildDetailRow(Icons.web, 'Website', widget.companyData['website'] ?? 'www.teknoindonesia.com'),
-          _buildDetailRow(Icons.calendar_today, 'Didirikan', widget.companyData['founded'] ?? '2015'),
-          _buildDetailRow(Icons.business_center, 'Industri', widget.companyData['industry'] ?? 'Teknologi'),
+          if ((widget.companyData['lokasi'] ?? widget.companyData['location']) != null)
+            _buildDetailRow(
+              Icons.location_on,
+              'Lokasi',
+              (widget.companyData['lokasi'] ?? widget.companyData['location']).toString(),
+            ),
+          if (widget.companyData['employees'] != null)
+            _buildDetailRow(Icons.people, 'Karyawan', widget.companyData['employees'].toString()),
+          if ((widget.companyData['tautan'] ?? widget.companyData['website']) != null)
+            _buildDetailRow(
+              Icons.web,
+              'Website',
+              (widget.companyData['tautan'] ?? widget.companyData['website']).toString(),
+            ),
+          if (widget.companyData['founded'] != null)
+            _buildDetailRow(Icons.calendar_today, 'Didirikan', widget.companyData['founded'].toString()),
+          if ((widget.companyData['sektor'] ?? widget.companyData['industry']) != null)
+            _buildDetailRow(
+              Icons.business_center,
+              'Industri',
+              (widget.companyData['sektor'] ?? widget.companyData['industry']).toString(),
+            ),
           
           const SizedBox(height: 20),
           
@@ -339,7 +362,8 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
           ),
           const SizedBox(height: 15),
           Text(
-            'PT. Teknologi Indonesia adalah perusahaan teknologi yang fokus pada pengembangan solusi digital inovatif. Didirikan pada tahun 2015, kami telah melayani lebih dari 500 klien di berbagai industri termasuk e-commerce, fintech, dan healthcare.',
+            // Use provided description if exists, otherwise show a concise fallback
+            (widget.companyData['tentang'] ?? widget.companyData['deskripsi'] ?? 'Belum ada deskripsi perusahaan.').toString(),
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],
@@ -356,23 +380,25 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Visi: Menjadi perusahaan teknologi terdepan di Indonesia yang memberikan solusi digital terbaik untuk kemajuan bisnis.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              height: 1.5,
+          if (widget.companyData['visi'] != null)
+            Text(
+              'Visi: ${widget.companyData['visi']}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
             ),
-          ),
           const SizedBox(height: 10),
-          Text(
-            'Misi: Mengembangkan produk dan layanan teknologi yang inovatif, memberikan pengalaman terbaik bagi klien, dan menciptakan lingkungan kerja yang inspiratif bagi karyawan.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              height: 1.5,
+          if (widget.companyData['misi'] != null)
+            Text(
+              'Misi: ${widget.companyData['misi']}',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
             ),
-          ),
           const SizedBox(height: 20),
           Text(
             'Keunggulan:',
@@ -383,11 +409,15 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 10),
-          _buildBulletPoint('Tim yang berpengalaman dan profesional'),
-          _buildBulletPoint('Teknologi terdepan dan inovatif'),
-          _buildBulletPoint('Layanan customer support 24/7'),
-          _buildBulletPoint('Harga yang kompetitif'),
-          _buildBulletPoint('Garansi dan maintenance jangka panjang'),
+          if (widget.companyData['keunggulan'] is List)
+            ...List<String>.from(widget.companyData['keunggulan'])
+                .map((e) => _buildBulletPoint(e))
+                .toList()
+          else ...[
+            _buildBulletPoint('Profesional dan berpengalaman'),
+            if ((widget.companyData['sektor'] ?? '').toString().isNotEmpty)
+              _buildBulletPoint('Fokus pada sektor ${widget.companyData['sektor']}'),
+          ],
         ],
       ),
     );
@@ -569,12 +599,16 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 15),
-          
-          _buildContactItem(Icons.phone, 'Telepon', '+62 21-1234-5678'),
-          _buildContactItem(Icons.email, 'Email', 'hr@teknoindonesia.com'),
-          _buildContactItem(Icons.web, 'Website', 'www.teknoindonesia.com'),
-          _buildContactItem(Icons.location_on, 'Alamat', 'Jl. Sudirman No. 123, Jakarta Pusat'),
-          _buildContactItem(Icons.schedule, 'Jam Kerja', 'Senin - Jumat, 08:00 - 17:00'),
+          if (widget.companyData['kontak'] != null)
+            _buildContactItem(Icons.phone, 'Telepon', widget.companyData['kontak'].toString()),
+          if (widget.companyData['email'] != null)
+            _buildContactItem(Icons.email, 'Email', widget.companyData['email'].toString()),
+          if ((widget.companyData['tautan'] ?? widget.companyData['website']) != null)
+            _buildContactItem(Icons.web, 'Website', (widget.companyData['tautan'] ?? widget.companyData['website']).toString()),
+          if (widget.companyData['alamat'] != null)
+            _buildContactItem(Icons.location_on, 'Alamat', widget.companyData['alamat'].toString()),
+          if (widget.companyData['jam_kerja'] != null)
+            _buildContactItem(Icons.schedule, 'Jam Kerja', widget.companyData['jam_kerja'].toString()),
           
           const SizedBox(height: 20),
           Text(

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import '../../user/components/detail_perusahaan_page.dart';
+import '../../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 
 class MitraProfilPage extends StatelessWidget {
   const MitraProfilPage({super.key});
@@ -31,29 +35,35 @@ class MitraProfilPage extends StatelessWidget {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.business, color: Color(0xFF1A365D), size: 36),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text('Perusahaan Anda', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6),
-                  Text('admin@perusahaan.com', style: TextStyle(color: Colors.white70, fontSize: 16)),
+          child: Consumer<AuthService>(
+            builder: (context, auth, _) {
+              final companyName = (auth.profile?.namaPerusahaan ?? 'Perusahaan Anda').toString();
+              final email = auth.user?.email ?? 'admin@perusahaan.com';
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.business, color: Color(0xFF1A365D), size: 36),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(companyName, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Text(email, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                    ],
+                  )
                 ],
-              )
-            ],
+              );
+            },
           ),
         ),
       ),
@@ -163,12 +173,29 @@ class _EditProfilPerusahaanPage extends StatefulWidget {
 
 class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _name = TextEditingController(text: 'Perusahaan Anda');
-  final TextEditingController _email = TextEditingController(text: 'admin@perusahaan.com');
-  final TextEditingController _phone = TextEditingController(text: '081234567890');
-  final TextEditingController _website = TextEditingController(text: 'www.perusahaan.com');
-  final TextEditingController _address = TextEditingController(text: 'Jl. Contoh No. 1, Jakarta');
-  final TextEditingController _about = TextEditingController(text: 'Perusahaan teknologi dengan fokus inovasi.');
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _phone = TextEditingController();
+  final TextEditingController _website = TextEditingController();
+  final TextEditingController _address = TextEditingController();
+  final TextEditingController _about = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill from current auth profile
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      _name.text = auth.profile?.namaPerusahaan ?? _name.text;
+      _email.text = auth.user?.email ?? _email.text;
+      _phone.text = auth.profile?.kontak ?? _phone.text;
+      _website.text = auth.profile?.tautan ?? _website.text;
+      _address.text = auth.profile?.alamat ?? _address.text;
+      _about.text = (auth.profile != null && (auth.profile as dynamic).tentang != null)
+          ? (auth.profile as dynamic).tentang
+          : _about.text;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -188,12 +215,7 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
               children: [
                 _input('Nama Perusahaan', _name, validator: (v) => v == null || v.trim().isEmpty ? 'Nama wajib diisi' : null),
                 const SizedBox(height: 12),
-                _input('Email', _email, keyboardType: TextInputType.emailAddress, validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Email wajib diisi';
-                  final emailReg = RegExp(r'^.+@.+\\..+$');
-                  if (!emailReg.hasMatch(v)) return 'Email tidak valid';
-                  return null;
-                }),
+                _input('Email', _email, keyboardType: TextInputType.emailAddress, readOnly: true, enabled: false),
                 const SizedBox(height: 12),
                 _input('No. Telepon', _phone, keyboardType: TextInputType.phone, validator: (v) => v == null || v.trim().length < 8 ? 'Nomor telepon tidak valid' : null),
                 const SizedBox(height: 12),
@@ -207,10 +229,28 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil perusahaan tersimpan')));
-                        Navigator.pop(context);
+                        final payload = {
+                          'nama_perusahaan': _name.text.trim(),
+                          'kontak': _phone.text.trim(),
+                          'tautan': _website.text.trim(),
+                          'alamat': _address.text.trim(),
+                          'tentang': _about.text.trim(),
+                        };
+
+                        final result = await ApiService.updateCompanyProfile(payload);
+                        if (!mounted) return;
+
+                        if (result['success'] == true) {
+                          // refresh user/company profile so header and other screens update
+                          await Provider.of<AuthService>(context, listen: false).refreshUser();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil perusahaan berhasil disimpan')));
+                          Navigator.pop(context); // close editor and show refreshed profile immediately
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Gagal menyimpan'), backgroundColor: Colors.red));
+                        }
                       }
                     },
                     child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
@@ -224,7 +264,7 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
     );
   }
 
-  Widget _input(String label, TextEditingController controller, {TextInputType? keyboardType, int maxLines = 1, String? Function(String?)? validator}) {
+  Widget _input(String label, TextEditingController controller, {TextInputType? keyboardType, int maxLines = 1, String? Function(String?)? validator, bool readOnly = false, bool enabled = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -237,6 +277,8 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
             keyboardType: keyboardType,
             maxLines: maxLines,
             validator: validator,
+            readOnly: readOnly,
+            enabled: enabled,
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -262,14 +304,21 @@ class _InformasiPerusahaanPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          children: const [
-            _ReadOnlyRow(title: 'Nama', value: 'Perusahaan Anda'),
-            SizedBox(height: 10),
-            _ReadOnlyRow(title: 'Email', value: 'admin@perusahaan.com'),
-            SizedBox(height: 10),
-            _ReadOnlyRow(title: 'Alamat', value: 'Jl. Contoh No. 1, Jakarta'),
-          ],
+        child: Consumer<AuthService>(
+          builder: (context, auth, _) {
+            final nama = auth.profile?.namaPerusahaan ?? '-';
+            final email = auth.user?.email ?? '-';
+            final alamat = '-'; // not persisted yet on backend table
+            return Column(
+              children: [
+                _ReadOnlyRow(title: 'Nama', value: nama),
+                const SizedBox(height: 10),
+                _ReadOnlyRow(title: 'Email', value: email),
+                const SizedBox(height: 10),
+                _ReadOnlyRow(title: 'Alamat', value: alamat),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 
 class EditProfilPage extends StatefulWidget {
   const EditProfilPage({super.key});
@@ -9,13 +12,13 @@ class EditProfilPage extends StatefulWidget {
 
 class _EditProfilPageState extends State<EditProfilPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'John Doe');
-  final _emailController = TextEditingController(text: 'john.doe@email.com');
-  final _phoneController = TextEditingController(text: '+62 812-3456-7890');
-  final _nimController = TextEditingController(text: '202410370311001');
-  final _prodiController = TextEditingController(text: 'Teknik Informatika');
-  final _angkatanController = TextEditingController(text: '2024');
-  final _alamatController = TextEditingController(text: 'Jl. Contoh No. 123, Jakarta');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _nimController = TextEditingController();
+  final _prodiController = TextEditingController();
+  final _angkatanController = TextEditingController();
+  final _alamatController = TextEditingController();
 
   @override
   void dispose() {
@@ -27,6 +30,33 @@ class _EditProfilPageState extends State<EditProfilPage> {
     _angkatanController.dispose();
     _alamatController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Load initial values from AuthService
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      _nameController.text = auth.user?.name ?? _nameController.text;
+      _emailController.text = auth.user?.email ?? _emailController.text;
+
+      // Attempt to fill from alumni profile if present
+      final profile = auth.profile;
+      try {
+        _phoneController.text = profile?.noHp ?? _phoneController.text;
+        _alamatController.text = profile?.alamat ?? _alamatController.text;
+        // Academic prefill
+        if (profile != null) {
+          _nimController.text = profile?.nim ?? _nimController.text;
+          // For program_studi and angkatan we may get them from profile map (set in API)
+          final dynamic programStudi = (profile is Map) ? profile['program_studi'] : null;
+          final dynamic angkatan = (profile is Map) ? profile['angkatan'] : null;
+          if (programStudi != null) _prodiController.text = programStudi.toString();
+          if (angkatan != null) _angkatanController.text = angkatan.toString();
+        }
+      } catch (_) {}
+    });
   }
 
   @override
@@ -359,16 +389,43 @@ class _EditProfilPageState extends State<EditProfilPage> {
   }
 
   void _saveProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Profil berhasil diperbarui!'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-    Navigator.pop(context);
+    final payload = {
+      'name': _nameController.text.trim(),
+      'no_hp': _phoneController.text.trim(),
+      'alamat': _alamatController.text.trim(),
+      'nim': _nimController.text.trim(),
+      'program_studi': _prodiController.text.trim(),
+      'angkatan': _angkatanController.text.trim(),
+    };
+
+    ApiService.updateAlumniProfile(payload).then((result) async {
+      if (!mounted) return;
+      if (result['success'] == true) {
+        // Refresh auth user/profile so header reflects latest data
+        await Provider.of<AuthService>(context, listen: false).refreshUser();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil berhasil diperbarui!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal memperbarui profil'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    });
   }
 }
