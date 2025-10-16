@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import '../../models/job_model.dart';
 
 class LamaranSayaPage extends StatefulWidget {
   const LamaranSayaPage({super.key});
@@ -9,11 +11,34 @@ class LamaranSayaPage extends StatefulWidget {
 
 class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _loading = false;
+  List<Map<String, dynamic>> _all = [];
+  List<Map<String, dynamic>> _pending = [];
+  List<Map<String, dynamic>> _accepted = [];
+  List<Map<String, dynamic>> _rejected = [];
+
+  Future<void> _loadApplications() async {
+    setState(() => _loading = true);
+    try {
+      final resp = await ApiService.getMyApplications();
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data'] as List<dynamic>;
+        final mapped = list.whereType<Map<String, dynamic>>().map((e) => e).toList();
+        _all = mapped;
+        _pending = mapped.where((e) => e['status'] == 'melamar' || e['status'] == 'pending').toList();
+        _accepted = mapped.where((e) => e['status'] == 'diterima').toList();
+        _rejected = mapped.where((e) => e['status'] == 'ditolak').toList();
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadApplications());
   }
 
   @override
@@ -67,35 +92,13 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  Widget _buildAllApplications() {
-    return _buildApplicationsList([
-      _createApplication('Software Developer', 'PT. Teknologi Indonesia', 'Diterima', Colors.green),
-      _createApplication('UI/UX Designer', 'CV. Digital Solutions', 'Pending', Colors.orange),
-      _createApplication('Data Analyst', 'PT. Inovasi Kreatif', 'Ditolak', Colors.red),
-      _createApplication('Marketing Specialist', 'PT. Global Finance', 'Pending', Colors.orange),
-      _createApplication('Frontend Developer', 'PT. Media Digital', 'Diterima', Colors.green),
-    ]);
-  }
+  Widget _buildAllApplications() => _loading ? _buildLoading() : _buildApplicationsList(_all);
 
-  Widget _buildPendingApplications() {
-    return _buildApplicationsList([
-      _createApplication('UI/UX Designer', 'CV. Digital Solutions', 'Pending', Colors.orange),
-      _createApplication('Marketing Specialist', 'PT. Global Finance', 'Pending', Colors.orange),
-    ]);
-  }
+  Widget _buildPendingApplications() => _loading ? _buildLoading() : _buildApplicationsList(_pending);
 
-  Widget _buildAcceptedApplications() {
-    return _buildApplicationsList([
-      _createApplication('Software Developer', 'PT. Teknologi Indonesia', 'Diterima', Colors.green),
-      _createApplication('Frontend Developer', 'PT. Media Digital', 'Diterima', Colors.green),
-    ]);
-  }
+  Widget _buildAcceptedApplications() => _loading ? _buildLoading() : _buildApplicationsList(_accepted);
 
-  Widget _buildRejectedApplications() {
-    return _buildApplicationsList([
-      _createApplication('Data Analyst', 'PT. Inovasi Kreatif', 'Ditolak', Colors.red),
-    ]);
-  }
+  Widget _buildRejectedApplications() => _loading ? _buildLoading() : _buildApplicationsList(_rejected);
 
   Widget _buildApplicationsList(List<Map<String, dynamic>> applications) {
     if (applications.isEmpty) {
@@ -140,7 +143,18 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
+  Widget _buildLoading() => Center(child: CircularProgressIndicator());
+
   Widget _buildApplicationCard(Map<String, dynamic> application) {
+    final lowongan = application['lowongan'] as Map<String, dynamic>?;
+    final perusahaan = (lowongan?['mitra'] as Map<String, dynamic>?)?['nama_perusahaan'] ?? 'Perusahaan';
+    final posisi = lowongan?['judul'] ?? 'Posisi';
+    final status = (application['status'] ?? '').toString();
+    final statusColor = status == 'diterima'
+        ? Colors.green
+        : status == 'ditolak'
+            ? Colors.red
+            : Colors.orange;
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
@@ -167,7 +181,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        application['position'],
+                        posisi,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -176,7 +190,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        application['company'],
+                        perusahaan,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -196,9 +210,9 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
                     ),
                   ),
                   child: Text(
-                    application['status'],
+                    status.toUpperCase(),
                     style: TextStyle(
-                      color: application['statusColor'],
+                      color: statusColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -237,11 +251,11 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
             const SizedBox(height: 15),
             
             // Aksi berdasarkan status
-            if (application['status'] == 'Pending')
+            if (status == 'melamar' || status == 'pending')
               _buildPendingActions()
-            else if (application['status'] == 'Diterima')
+            else if (status == 'diterima')
               _buildAcceptedActions()
-            else if (application['status'] == 'Ditolak')
+            else if (status == 'ditolak')
               _buildRejectedActions(),
           ],
         ),

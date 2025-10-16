@@ -179,6 +179,9 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
   final TextEditingController _website = TextEditingController();
   final TextEditingController _address = TextEditingController();
   final TextEditingController _about = TextEditingController();
+  final TextEditingController _visi = TextEditingController();
+  final TextEditingController _misi = TextEditingController();
+  final TextEditingController _keunggulan = TextEditingController();
 
   @override
   void initState() {
@@ -194,6 +197,17 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
       _about.text = (auth.profile != null && (auth.profile as dynamic).tentang != null)
           ? (auth.profile as dynamic).tentang
           : _about.text;
+      // Optional fields
+      _visi.text = (auth.profile as dynamic)?.visi ?? _visi.text;
+      _misi.text = (auth.profile as dynamic)?.misi ?? _misi.text;
+      final k = (auth.profile as dynamic)?.keunggulan;
+      if (k != null) {
+        if (k is List) {
+          _keunggulan.text = k.join('\n');
+        } else {
+          _keunggulan.text = k.toString();
+        }
+      }
     });
   }
 
@@ -224,6 +238,12 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
                 _input('Alamat', _address, maxLines: 2),
                 const SizedBox(height: 12),
                 _input('Tentang Perusahaan', _about, maxLines: 4),
+                const SizedBox(height: 12),
+                _input('Visi', _visi, maxLines: 3),
+                const SizedBox(height: 12),
+                _input('Misi', _misi, maxLines: 3),
+                const SizedBox(height: 12),
+                _input('Keunggulan (pisahkan baris baru)', _keunggulan, maxLines: 4),
                 const SizedBox(height: 20),
                 SizedBox(
                   height: 50,
@@ -237,6 +257,13 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
                           'tautan': _website.text.trim(),
                           'alamat': _address.text.trim(),
                           'tentang': _about.text.trim(),
+                          'visi': _visi.text.trim(),
+                          'misi': _misi.text.trim(),
+                          'keunggulan': _keunggulan.text
+                              .split('\n')
+                              .map((e) => e.trim())
+                              .where((e) => e.isNotEmpty)
+                              .toList(),
                         };
 
                         final result = await ApiService.updateCompanyProfile(payload);
@@ -308,7 +335,7 @@ class _InformasiPerusahaanPage extends StatelessWidget {
           builder: (context, auth, _) {
             final nama = auth.profile?.namaPerusahaan ?? '-';
             final email = auth.user?.email ?? '-';
-            final alamat = '-'; // not persisted yet on backend table
+            final alamat = auth.profile?.alamat ?? '-';
             return Column(
               children: [
                 _ReadOnlyRow(title: 'Nama', value: nama),

@@ -37,9 +37,8 @@ class AuthService extends ChangeNotifier {
       final result = await ApiService.login(email, password);
       
       if (result['success']) {
-        _user = User.fromJson(result['data']['user']);
-        _profile = _parseProfile(result['data']['profile']);
-        notifyListeners();
+        // Load fresh user + profile from backend to ensure consistency after switching accounts/roles
+        await _loadUserProfile();
         return true;
       } else {
         _setError(result['message']);

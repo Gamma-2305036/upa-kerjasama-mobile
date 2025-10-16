@@ -98,6 +98,11 @@ class MitraProfile {
   final String? sektor;
   final String? kontak;
   final String? tautan;
+  final String? alamat;
+  final String? tentang;
+  final String? visi;
+  final String? misi;
+  final List<String>? keunggulan;
   final String? mulaiKerjasama;
   final String? akhirKerjasama;
 
@@ -108,11 +113,26 @@ class MitraProfile {
     this.sektor,
     this.kontak,
     this.tautan,
+    this.alamat,
+    this.tentang,
+    this.visi,
+    this.misi,
+    this.keunggulan,
     this.mulaiKerjasama,
     this.akhirKerjasama,
   });
 
   factory MitraProfile.fromJson(Map<String, dynamic> json) {
+    List<String>? _toStringList(dynamic v) {
+      if (v == null) return null;
+      if (v is List) return v.map((e) => e.toString()).toList();
+      if (v is String) {
+        // support comma or newline separated text
+        final parts = v.contains('\n') ? v.split('\n') : v.split(',');
+        return parts.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      }
+      return null;
+    }
     return MitraProfile(
       id: json['id'],
       namaPerusahaan: json['nama_perusahaan'],
@@ -120,6 +140,11 @@ class MitraProfile {
       sektor: json['sektor'],
       kontak: json['kontak'],
       tautan: json['tautan'],
+      alamat: json['alamat'],
+      tentang: json['tentang'],
+      visi: json['visi'],
+      misi: json['misi'],
+      keunggulan: _toStringList(json['keunggulan']),
       mulaiKerjasama: json['mulai_kerjasama'],
       akhirKerjasama: json['akhir_kerjasama'],
     );

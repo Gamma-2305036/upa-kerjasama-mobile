@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../models/job_model.dart';
+import '../../services/api_service.dart';
+import 'detail_lowongan_page.dart';
 
 class DetailPerusahaanPage extends StatefulWidget {
   final Map<String, dynamic> companyData;
@@ -15,11 +18,36 @@ class DetailPerusahaanPage extends StatefulWidget {
 class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isFollowing = false;
+  List<Job> _jobs = [];
+  bool _jobsLoading = false;
+
+  Future<void> _loadCompanyJobs() async {
+    setState(() => _jobsLoading = true);
+    try {
+      // Fetch public jobs list then filter by this company id
+      final resp = await ApiService.getJobs();
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data'] as List<dynamic>;
+        final companyId = widget.companyData['id']?.toString();
+        final jobs = list
+            .whereType<Map<String, dynamic>>()
+            .map((e) => Job.fromJson(e))
+            .where((j) => j.mitraId == companyId)
+            .toList();
+        setState(() => _jobs = jobs);
+      }
+    } catch (_) {
+      // ignore errors; UI will show empty state
+    } finally {
+      if (mounted) setState(() => _jobsLoading = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCompanyJobs());
   }
 
   @override
@@ -380,25 +408,49 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 10),
-          if (widget.companyData['visi'] != null)
-            Text(
-              'Visi: ${widget.companyData['visi']}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-          const SizedBox(height: 10),
-          if (widget.companyData['misi'] != null)
-            Text(
-              'Misi: ${widget.companyData['misi']}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
+          Builder(builder: (context) {
+            final String visi = (widget.companyData['visi'] ?? '').toString().trim();
+            final String misi = (widget.companyData['misi'] ?? '').toString().trim();
+            final bool hasVisi = visi.isNotEmpty && visi != '-';
+            final bool hasMisi = misi.isNotEmpty && misi != '-';
+
+            if (!hasVisi && !hasMisi) {
+              return Text(
+                'Belum ada visi & misi.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasVisi) ...[
+                  Text(
+                    visi,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (hasMisi)
+                  Text(
+                    misi,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+              ],
+            );
+          }),
           const SizedBox(height: 20),
           Text(
             'Keunggulan:',
@@ -409,15 +461,37 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 10),
-          if (widget.companyData['keunggulan'] is List)
-            ...List<String>.from(widget.companyData['keunggulan'])
-                .map((e) => _buildBulletPoint(e))
-                .toList()
-          else ...[
-            _buildBulletPoint('Profesional dan berpengalaman'),
-            if ((widget.companyData['sektor'] ?? '').toString().isNotEmpty)
-              _buildBulletPoint('Fokus pada sektor ${widget.companyData['sektor']}'),
-          ],
+          Builder(builder: (context) {
+            List<String> items = [];
+            final raw = widget.companyData['keunggulan'];
+            if (raw is List) {
+              items = raw.map((e) => e.toString().trim()).toList();
+            } else if (raw is String) {
+              final s = raw.trim();
+              if (s.isNotEmpty && s != '-') {
+                items = (s.contains('\n') ? s.split('\n') : s.split(','))
+                    .map((e) => e.trim())
+                    .toList();
+              }
+            }
+            items = items.where((e) => e.isNotEmpty && e != '-').toList();
+
+            if (items.isEmpty) {
+              return Text(
+                'Belum ada keunggulan.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: items.map((e) => _buildBulletPoint(e)).toList(),
+            );
+          }),
         ],
       ),
     );
@@ -438,56 +512,95 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
             ),
           ),
           const SizedBox(height: 15),
-          
-          _buildJobItem('Software Developer', 'Full Time', 'Jakarta', 'Rp 8-12 Juta'),
-          _buildJobItem('UI/UX Designer', 'Full Time', 'Jakarta', 'Rp 6-10 Juta'),
-          _buildJobItem('Data Analyst', 'Contract', 'Jakarta', 'Rp 7-11 Juta'),
-          _buildJobItem('DevOps Engineer', 'Full Time', 'Jakarta', 'Rp 10-15 Juta'),
-          _buildJobItem('Product Manager', 'Full Time', 'Jakarta', 'Rp 12-18 Juta'),
+          if (_jobsLoading)
+            Center(child: CircularProgressIndicator())
+          else if (_jobs.isEmpty)
+            Text('Belum ada lowongan aktif dari perusahaan ini.', style: TextStyle(color: Colors.grey[600]))
+          else
+            ..._jobs.map((job) => _buildJobCard(job)).toList(),
         ],
       ),
     );
   }
 
-  Widget _buildJobItem(String position, String type, String location, String salary) {
+  Widget _buildJobCard(Job job) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            position,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A365D),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DetailLowonganPage(job: job)),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(job.judul, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A365D))),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Icon(Icons.work, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: Text(
+                        job.jenisPekerjaan ?? 'Tidak disebutkan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: Text(
+                        job.lokasi,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.attach_money, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      fit: FlexFit.tight,
+                      child: Text(
+                        _formatSalary(job.gajiMin, job.gajiMax),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Icon(Icons.work, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 5),
-              Text(type, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              const SizedBox(width: 15),
-              Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 5),
-              Text(location, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              const SizedBox(width: 15),
-              Icon(Icons.attach_money, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 5),
-              Text(salary, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            ],
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  String _formatSalary(String? min, String? max) {
+    if (min != null && max != null) return 'Rp $min - $max';
+    if (min != null) return 'Rp $min+';
+    if (max != null) return 'Rp $max';
+    return 'Gaji tidak disebutkan';
   }
 
   Widget _buildReviewsTab() {

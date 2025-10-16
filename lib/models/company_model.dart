@@ -7,6 +7,11 @@ class Company {
   final String? sektor;
   final String? kontak;
   final String? tautan;
+  final String? alamat;
+  final String? tentang;
+  final String? visi;
+  final String? misi;
+  final List<String>? keunggulan;
   final String? mulaiKerjasama;
   final String? akhirKerjasama;
   final String createdAt;
@@ -21,6 +26,11 @@ class Company {
     this.sektor,
     this.kontak,
     this.tautan,
+    this.alamat,
+    this.tentang,
+    this.visi,
+    this.misi,
+    this.keunggulan,
     this.mulaiKerjasama,
     this.akhirKerjasama,
     required this.createdAt,
@@ -44,6 +54,21 @@ class Company {
       return [];
     }
 
+    List<String>? _toStringList(dynamic v) {
+      if (v == null) return null;
+      if (v is List) return v.map((e) => e.toString()).toList();
+      if (v is String) {
+        try {
+          final decoded = jsonDecode(v);
+          if (decoded is List) return decoded.map((e) => e.toString()).toList();
+        } catch (_) {}
+        // fallback: split by newline or comma
+        final parts = v.contains('\n') ? v.split('\n') : v.split(',');
+        return parts.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      }
+      return null;
+    }
+
     final lowonganRaw = _normalizeLowongan(json['lowongan']);
 
     return Company(
@@ -54,6 +79,11 @@ class Company {
       sektor: json['sektor'],
       kontak: json['kontak'],
       tautan: json['tautan'],
+      alamat: json['alamat'],
+      tentang: json['tentang'],
+      visi: json['visi'],
+      misi: json['misi'],
+      keunggulan: _toStringList(json['keunggulan']),
       mulaiKerjasama: json['mulai_kerjasama'],
       akhirKerjasama: json['akhir_kerjasama'],
       createdAt: json['created_at'] ?? '',
@@ -71,6 +101,11 @@ class Company {
       'sektor': sektor,
       'kontak': kontak,
       'tautan': tautan,
+      'alamat': alamat,
+      'tentang': tentang,
+      'visi': visi,
+      'misi': misi,
+      'keunggulan': keunggulan,
       'mulai_kerjasama': mulaiKerjasama,
       'akhir_kerjasama': akhirKerjasama,
       'created_at': createdAt,

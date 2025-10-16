@@ -228,6 +228,46 @@ class ApiService {
     }
   }
 
+  // Apply to a job (alumni)
+  static Future<Map<String, dynamic>> applyJob(String jobId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/jobs/$jobId/apply'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal melamar'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Fetch my applications (alumni)
+  static Future<Map<String, dynamic>> getMyApplications({String? status}) async {
+    try {
+      String url = '$baseUrl/applications/my';
+      if (status != null && status.isNotEmpty) {
+        url += '?status=${Uri.encodeComponent(status)}';
+      }
+      final response = await http
+          .get(
+        Uri.parse(url),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengambil lamaran'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
   // Get jobs owned by the logged-in mitra
   static Future<Map<String, dynamic>> getMyJobs() async {
     try {

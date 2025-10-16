@@ -2,6 +2,7 @@ import 'user_model.dart';
 
 class Job {
   final String id;
+  final String mitraId;
   final String judul;
   final String deskripsi;
   final String lokasi;
@@ -20,6 +21,7 @@ class Job {
 
   Job({
     required this.id,
+    required this.mitraId,
     required this.judul,
     required this.deskripsi,
     required this.lokasi,
@@ -40,6 +42,8 @@ class Job {
   factory Job.fromJson(Map<String, dynamic> json) {
     return Job(
       id: json['id'] ?? '',
+      mitraId: json['mitra_id']?.toString() ??
+          (json['mitraPerusahaanId']?.toString() ?? ''),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       lokasi: json['lokasi'] ?? '',
@@ -63,6 +67,7 @@ class Job {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'mitra_id': mitraId,
       'judul': judul,
       'deskripsi': deskripsi,
       'lokasi': lokasi,
