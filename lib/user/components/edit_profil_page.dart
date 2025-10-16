@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 
@@ -19,6 +21,8 @@ class _EditProfilPageState extends State<EditProfilPage> {
   final _prodiController = TextEditingController();
   final _angkatanController = TextEditingController();
   final _alamatController = TextEditingController();
+  String? _cvPathLocal; // selected local pdf path
+  String? _cvRemoteUrl; // saved cv url from profile
 
   @override
   void dispose() {
@@ -49,11 +53,14 @@ class _EditProfilPageState extends State<EditProfilPage> {
         // Academic prefill
         if (profile != null) {
           _nimController.text = profile?.nim ?? _nimController.text;
-          // For program_studi and angkatan we may get them from profile map (set in API)
-          final dynamic programStudi = (profile is Map) ? profile['program_studi'] : null;
-          final dynamic angkatan = (profile is Map) ? profile['angkatan'] : null;
+          // Prefer typed fields from model; fallback to map if backend returns raw array
+          final dynamic programStudi = (profile as dynamic).programStudi ?? ((profile is Map) ? profile['program_studi'] : null);
+          final dynamic angkatan = (profile as dynamic).angkatan ?? ((profile is Map) ? profile['angkatan'] : null);
           if (programStudi != null) _prodiController.text = programStudi.toString();
           if (angkatan != null) _angkatanController.text = angkatan.toString();
+          // Persisted CV url for display
+          final dynamic cv = (profile as dynamic).cvUrl ?? ((profile is Map) ? profile['cv_url'] : null);
+          if (cv != null) setState(() { _cvRemoteUrl = cv.toString(); });
         }
       } catch (_) {}
     });
@@ -325,6 +332,10 @@ class _EditProfilPageState extends State<EditProfilPage> {
               ),
               
               const SizedBox(height: 20),
+              // Upload CV (PDF only)
+              _buildSectionTitle('Curriculum Vitae (PDF)'),
+              const SizedBox(height: 12),
+              _buildCvUploader(),
             ],
           ),
         ),
@@ -427,5 +438,95 @@ class _EditProfilPageState extends State<EditProfilPage> {
         );
       }
     });
+  }
+
+  Widget _buildCvUploader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.picture_as_pdf, color: Color(0xFF1A365D)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _cvPathLocal != null
+                      ? _cvPathLocal!.split('/').last
+                      : (_cvRemoteUrl != null ? 'CV tersimpan: ${_cvRemoteUrl!.split('/').last}' : 'Pilih file PDF (maks 5MB)'),
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+              ),
+              TextButton(
+                onPressed: _pickPdf,
+                child: const Text('Pilih File'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_cvRemoteUrl != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: OutlinedButton.icon(
+                onPressed: () => _openPdf(_cvRemoteUrl!),
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Lihat CV Tersimpan'),
+              ),
+            ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A365D),
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: _cvPathLocal == null ? null : _uploadCv,
+            icon: const Icon(Icons.cloud_upload),
+            label: const Text('Unggah CV'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickPdf() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+      if (res != null && res.files.isNotEmpty) {
+        setState(() {
+          _cvPathLocal = res.files.single.path;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _uploadCv() async {
+    if (_cvPathLocal == null) return;
+    final res = await ApiService.uploadAlumniCv(_cvPathLocal!);
+    if (!mounted) return;
+    if (res['success'] == true) {
+      await Provider.of<AuthService>(context, listen: false).refreshUser();
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final dynamic cv = (auth.profile as dynamic)?.cvUrl ?? ((auth.profile is Map) ? auth.profile['cv_url'] : null);
+      setState(() { _cvRemoteUrl = cv?.toString(); _cvPathLocal = null; });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CV berhasil diunggah'), backgroundColor: Colors.green),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res['message'] ?? 'Gagal mengunggah CV'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _openPdf(String url) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: url, title: 'Curriculum Vitae')));
   }
 }

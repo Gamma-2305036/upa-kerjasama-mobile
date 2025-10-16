@@ -42,6 +42,9 @@ class AlumniProfile {
   final String? id;
   final String? nim;
   final String? noHp;
+  final String? programStudi; // added: academic field for prefill
+  final String? angkatan; // added: academic field for prefill (tahun masuk)
+  final String? cvUrl; // persisted CV link from backend
   final String? tempatLahir;
   final String? tanggalLahir;
   final String? jenisKelamin;
@@ -58,6 +61,9 @@ class AlumniProfile {
     this.id,
     this.nim,
     this.noHp,
+    this.programStudi,
+    this.angkatan,
+    this.cvUrl,
     this.tempatLahir,
     this.tanggalLahir,
     this.jenisKelamin,
@@ -76,6 +82,10 @@ class AlumniProfile {
       id: json['id'],
       nim: json['nim'],
       noHp: json['no_hp'],
+      // Support both flattened keys from API and nested academic relation keys
+      programStudi: json['program_studi'] ?? json['data_akademik']?['program_studi'],
+      angkatan: (json['angkatan'] ?? json['data_akademik']?['tahun_masuk'])?.toString(),
+      cvUrl: json['cv_url'],
       tempatLahir: json['tempat_lahir'],
       tanggalLahir: json['tanggal_lahir'],
       jenisKelamin: json['jenis_kelamin'],

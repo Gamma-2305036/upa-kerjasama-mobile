@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
@@ -607,6 +608,29 @@ class ApiService {
         'success': false,
         'message': 'Terjadi kesalahan: ${e.toString()}',
       };
+    }
+  }
+
+  // Upload alumni CV (PDF)
+  static Future<Map<String, dynamic>> uploadAlumniCv(String filePath) async {
+    try {
+      final uri = Uri.parse('$baseUrl/alumni/cv');
+      final request = http.MultipartRequest('POST', uri);
+      _getHeaders().forEach((k, v) {
+        if (k.toLowerCase() != 'content-type') {
+          request.headers[k] = v; // let multipart set its own content-type
+        }
+      });
+      request.files.add(await http.MultipartFile.fromPath('cv', filePath, contentType: MediaType('application', 'pdf')));
+      final streamed = await request.send().timeout(const Duration(seconds: 20));
+      final response = await http.Response.fromStream(streamed);
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengunggah CV'};
+    } on TimeoutException {
+      return {'success': false, 'message': 'Permintaan unggah CV timeout. Coba lagi.'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
     }
   }
 }

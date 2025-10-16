@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
+import '../../user/components/pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../services/job_service.dart';
 import '../../services/api_service.dart';
@@ -632,11 +637,11 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
                         ),
                       ),
                       if (cvUrl != null)
-                        TextButton.icon(onPressed: () => _openUrl(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('CV')),
+                        TextButton.icon(onPressed: () => _openPdf(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _infoTile('NIM', _profile?['profile']?['nim']),
+                _infoTile('NIM', _profile?['profile']?['nim']),
                   _infoTile('No. HP', _profile?['profile']?['no_hp']),
                   _infoTile('Alamat', _profile?['profile']?['alamat']),
                   _infoTile('Kota', _profile?['profile']?['kota']),
@@ -644,6 +649,16 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
                   _infoTile('Program Studi', _profile?['profile']?['program_studi'] ?? _profile?['profile']?['data_akademik']?['program_studi']),
                   _infoTile('Angkatan', _profile?['profile']?['angkatan'] ?? _profile?['profile']?['data_akademik']?['tahun_masuk']),
                   _infoTile('IPK', _profile?['profile']?['ipk']?.toString()),
+                const SizedBox(height: 12),
+                if (cvUrl == null)
+                  Builder(builder: (_) {
+                    final alt = _profile?['profile']?['cv_url'] as String?;
+                    return (alt != null)
+                        ? Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(onPressed: () => _openPdf(alt), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),)
+                        : const SizedBox.shrink();
+                  }),
                 ],
               ),
       ),
@@ -664,10 +679,13 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
     );
   }
 
-  void _openUrl(String url) {
-    // Implement with url_launcher if available; fallback to snackbar
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buka: $url')));
+  void _openPdf(String url) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: url, title: 'CV Pelamar')));
   }
 }
+
+
+// imports needed at top of file
+// in-app pdf viewer is factored out to PdfViewerPage
 
 
