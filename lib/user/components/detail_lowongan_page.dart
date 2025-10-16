@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/job_model.dart';
+import '../../services/api_service.dart';
 
 class DetailLowonganPage extends StatefulWidget {
   final Job job;
@@ -16,11 +17,16 @@ class DetailLowonganPage extends StatefulWidget {
 class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isSaved = false;
+  bool _hasApplied = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedState();
+      _loadAppliedState();
+    });
   }
 
   @override
@@ -74,17 +80,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
             _isSaved ? Icons.favorite : Icons.favorite_border,
             color: _isSaved ? Colors.red : Colors.white,
           ),
-          onPressed: () {
-            setState(() {
-              _isSaved = !_isSaved;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_isSaved ? 'Lowongan disimpan' : 'Lowongan dihapus dari tersimpan'),
-                backgroundColor: _isSaved ? Colors.green : Colors.red,
-              ),
-            );
-          },
+          onPressed: _toggleSave,
         ),
         IconButton(
           icon: Icon(Icons.share, color: Colors.white),
@@ -488,7 +484,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(15),
-                  onTap: () => _saveJob(),
+                  onTap: _toggleSave,
                   child: Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -527,10 +523,10 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(15),
-                  onTap: () => _applyJob(),
+                  onTap: _hasApplied ? null : () => _applyJob(),
                   child: Center(
                     child: Text(
-                      'Lamar Sekarang',
+                      _hasApplied ? 'Sudah Melamar' : 'Lamar Sekarang',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -548,16 +544,63 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
     );
   }
 
-  void _saveJob() {
-    setState(() {
-      _isSaved = !_isSaved;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isSaved ? 'Lowongan disimpan' : 'Lowongan dihapus dari tersimpan'),
-        backgroundColor: _isSaved ? Colors.green : Colors.red,
-      ),
-    );
+  Future<void> _loadSavedState() async {
+    try {
+      final resp = await ApiService.getSavedJobs();
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data'] as List<dynamic>;
+        final found = list.whereType<Map<String, dynamic>>().any((e) {
+          final job = e['lowongan'] as Map<String, dynamic>?;
+          return job != null && job['id']?.toString() == widget.job.id.toString();
+        });
+        if (mounted) setState(() => _isSaved = found);
+      }
+    } catch (_) {
+      // ignore load error; UI defaults to not saved
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    final wasSaved = _isSaved;
+    setState(() => _isSaved = !wasSaved);
+
+    try {
+      if (!wasSaved) {
+        final resp = await ApiService.saveJob(widget.job.id.toString());
+        if (resp['success'] != true) throw resp['message'] ?? 'Gagal menyimpan';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lowongan disimpan')),
+        );
+      } else {
+        final resp = await ApiService.removeSavedJob(widget.job.id.toString());
+        if (resp['success'] != true) throw resp['message'] ?? 'Gagal menghapus';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lowongan dihapus dari tersimpan')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isSaved = wasSaved); // revert on error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _loadAppliedState() async {
+    try {
+      final resp = await ApiService.getMyApplications();
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data'] as List<dynamic>;
+        final applied = list.whereType<Map<String, dynamic>>().any((e) {
+          final job = e['lowongan'] as Map<String, dynamic>?;
+          final status = (e['status'] ?? '').toString();
+          if (job == null) return false;
+          final isThisJob = job['id']?.toString() == widget.job.id.toString();
+          return isThisJob && status != 'tersimpan';
+        });
+        if (mounted) setState(() => _hasApplied = applied);
+      }
+    } catch (_) {}
   }
 
   void _applyJob() {
@@ -573,14 +616,25 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
             child: Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Lamaran berhasil dikirim!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              try {
+                final res = await ApiService.applyJob(widget.job.id.toString());
+                if (res['success'] == true) {
+                  if (mounted) setState(() => _hasApplied = true);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Lamaran berhasil dikirim!')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res['message']?.toString() ?? 'Gagal melamar')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+                );
+              }
             },
             child: Text('Lamar', style: TextStyle(color: Color(0xFF1A365D))),
           ),

@@ -246,6 +246,60 @@ class ApiService {
     }
   }
 
+  // Get saved jobs (alumni)
+  static Future<Map<String, dynamic>> getSavedJobs() async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/saved-jobs'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengambil lowongan tersimpan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Save a job (toggle save)
+  static Future<Map<String, dynamic>> saveJob(String jobId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/jobs/$jobId/save'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal menyimpan lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Remove a saved job
+  static Future<Map<String, dynamic>> removeSavedJob(String jobId) async {
+    try {
+      final response = await http
+          .delete(
+        Uri.parse('$baseUrl/jobs/$jobId/save'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal menghapus lowongan tersimpan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
   // Fetch my applications (alumni)
   static Future<Map<String, dynamic>> getMyApplications({String? status}) async {
     try {
@@ -355,6 +409,59 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['success']) return data;
       return {'success': false, 'message': data['message'] ?? 'Gagal memperbarui status lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Mitra: get applicants for a specific job
+  static Future<Map<String, dynamic>> getApplicantsForJob(String jobId) async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId/applicants'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengambil pelamar'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Mitra: update applicant status
+  static Future<Map<String, dynamic>> updateApplicantStatus(String applicationId, String status) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/applications/$applicationId/status'),
+        headers: _getHeaders(),
+        body: jsonEncode({'status': status}),
+      )
+          .timeout(const Duration(seconds: 15));
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal memperbarui status pelamar'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Get alumni profile by user id (for mitra viewing applicant)
+  static Future<Map<String, dynamic>> getAlumniProfileByUserId(String userId) async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/alumni/$userId'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengambil profil alumni'};
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
     }

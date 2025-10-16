@@ -202,10 +202,10 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: application['statusColor'].withOpacity(0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: application['statusColor'],
+                      color: statusColor,
                       width: 1,
                     ),
                   ),

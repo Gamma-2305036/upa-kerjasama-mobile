@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
+import '../../models/job_model.dart';
 
 class LowonganTersimpanPage extends StatefulWidget {
   const LowonganTersimpanPage({super.key});
@@ -8,60 +10,76 @@ class LowonganTersimpanPage extends StatefulWidget {
 }
 
 class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
-  List<Map<String, dynamic>> _savedJobs = [
-    {
-      'id': 1,
-      'position': 'Software Developer',
-      'company': 'PT. Teknologi Indonesia',
-      'location': 'Jakarta',
-      'salary': 'Rp 8-12 Juta',
-      'type': 'Full Time',
-      'savedDate': '2024-12-15',
-      'isActive': true,
-    },
-    {
-      'id': 2,
-      'position': 'UI/UX Designer',
-      'company': 'CV. Digital Solutions',
-      'location': 'Bandung',
-      'salary': 'Rp 6-10 Juta',
-      'type': 'Full Time',
-      'savedDate': '2024-12-14',
-      'isActive': true,
-    },
-    {
-      'id': 3,
-      'position': 'Data Analyst',
-      'company': 'PT. Inovasi Kreatif',
-      'location': 'Surabaya',
-      'salary': 'Rp 7-11 Juta',
-      'type': 'Contract',
-      'savedDate': '2024-12-13',
-      'isActive': false,
-    },
-    {
-      'id': 4,
-      'position': 'Marketing Specialist',
-      'company': 'PT. Global Finance',
-      'location': 'Jakarta',
-      'salary': 'Rp 5-9 Juta',
-      'type': 'Full Time',
-      'savedDate': '2024-12-12',
-      'isActive': true,
-    },
-    {
-      'id': 5,
-      'position': 'Frontend Developer',
-      'company': 'PT. Media Digital',
-      'location': 'Yogyakarta',
-      'salary': 'Rp 6-10 Juta',
-      'type': 'Remote',
-      'savedDate': '2024-12-11',
-      'isActive': true,
-    },
-  ];
+  List<Map<String, dynamic>> _savedJobs = [];
+  bool _loading = false;
+  String? _error;
+  Set<String> _appliedJobIds = {};
 
   String _selectedFilter = 'Semua';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchSavedJobs());
+  }
+
+  Future<void> _fetchSavedJobs() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final resp = await ApiService.getSavedJobs();
+      final apps = await ApiService.getMyApplications();
+      if (resp['success'] == true) {
+        final List<dynamic> list = resp['data'] as List<dynamic>;
+        if (apps['success'] == true) {
+          final List<dynamic> myApps = apps['data'] as List<dynamic>;
+          _appliedJobIds = myApps
+              .whereType<Map<String, dynamic>>()
+              .where((e) => (e['status'] ?? '') != 'tersimpan')
+              .map((e) => ((e['lowongan'] as Map<String, dynamic>?)?['id']).toString())
+              .toSet();
+        } else {
+          _appliedJobIds = {};
+        }
+        final mapped = list
+            .whereType<Map<String, dynamic>>()
+            .map((e) {
+              final job = e['lowongan'] as Map<String, dynamic>?;
+              if (job == null) return null;
+              final mitra = job['mitra'] as Map<String, dynamic>?;
+              return {
+                'id': job['id'],
+                'position': job['judul'] ?? job['posisi'] ?? '-',
+                'company': mitra != null ? (mitra['nama_perusahaan'] ?? '-') : '-',
+                'location': job['lokasi'] ?? '-',
+                'salary': _formatGaji(job['gaji_min'], job['gaji_max']),
+                'type': job['jenis_pekerjaan'] ?? '-',
+                'savedDate': (e['saved_at'] ?? job['created_at'] ?? DateTime.now().toString()).toString(),
+                'isActive': job['status_aktif'] == true,
+                'isApplied': _appliedJobIds.contains(job['id']?.toString()),
+              };
+            })
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        setState(() => _savedJobs = mapped);
+      } else {
+        setState(() => _error = resp['message']?.toString());
+      }
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _formatGaji(dynamic min, dynamic max) {
+    if (min == null && max == null) return '-';
+    String fmt(dynamic v) => v == null ? '' : 'Rp ${v.toString()}';
+    if (min != null && max != null) return '${fmt(min)} - ${fmt(max)}';
+    return fmt(min ?? max);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +162,29 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
   }
 
   Widget _buildJobList() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red[400], size: 48),
+              const SizedBox(height: 10),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _fetchSavedJobs,
+                child: const Text('Coba lagi'),
+              )
+            ],
+          ),
+        ),
+      );
+    }
     final filteredJobs = _getFilteredJobs();
     
     if (filteredJobs.isEmpty) {
@@ -374,17 +415,17 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
                   child: Container(
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Color(0xFF1A365D),
+                      color: (job['isApplied'] == true) ? Colors.grey : Color(0xFF1A365D),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => _applyJob(job),
+                        onTap: (job['isApplied'] == true) ? null : () => _applyJob(job),
                         child: Center(
                           child: Text(
-                            'Lamar Sekarang',
+                            (job['isApplied'] == true) ? 'Sudah Melamar' : 'Lamar Sekarang',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -431,7 +472,7 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
     }
   }
 
-  void _removeJob(int jobId) {
+  void _removeJob(dynamic jobId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -445,19 +486,36 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                _savedJobs.removeWhere((job) => job['id'] == jobId);
-              });
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Lowongan berhasil dihapus')),
-              );
+              _confirmRemove(jobId);
             },
             child: Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmRemove(dynamic jobId) async {
+    try {
+      final resp = await ApiService.removeSavedJob(jobId.toString());
+      if (resp['success'] == true) {
+        setState(() {
+          _savedJobs.removeWhere((job) => job['id'].toString() == jobId.toString());
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lowongan berhasil dihapus')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resp['message']?.toString() ?? 'Gagal menghapus')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+      );
+    }
   }
 
   void _shareJob(Map<String, dynamic> job) {
@@ -479,11 +537,29 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
             child: Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Lamaran berhasil dikirim!')),
-              );
+              try {
+                final res = await ApiService.applyJob(job['id'].toString());
+                if (res['success'] == true) {
+                  setState(() {
+                    _appliedJobIds.add(job['id'].toString());
+                    final idx = _savedJobs.indexWhere((e) => e['id'] == job['id']);
+                    if (idx >= 0) _savedJobs[idx]['isApplied'] = true;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Lamaran berhasil dikirim!')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(res['message']?.toString() ?? 'Gagal melamar')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Terjadi kesalahan: ${e.toString()}')),
+                );
+              }
             },
             child: Text('Lamar', style: TextStyle(color: Color(0xFF1A365D))),
           ),

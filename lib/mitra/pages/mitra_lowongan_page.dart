@@ -364,6 +364,48 @@ class _DetailLowonganPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _ApplicantsScreen(jobId: jobId);
+  }
+}
+
+class _ApplicantsScreen extends StatefulWidget {
+  final String jobId;
+  const _ApplicantsScreen({required this.jobId});
+
+  @override
+  State<_ApplicantsScreen> createState() => _ApplicantsScreenState();
+}
+
+class _ApplicantsScreenState extends State<_ApplicantsScreen> {
+  bool _loading = false;
+  String? _error;
+  List<Map<String, dynamic>> _apps = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final res = await ApiService.getApplicantsForJob(widget.jobId);
+      if (res['success'] == true) {
+        final List<dynamic> list = res['data'] as List<dynamic>;
+        _apps = list.whereType<Map<String, dynamic>>().toList();
+      } else {
+        _error = res['message'];
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -371,50 +413,260 @@ class _DetailLowonganPage extends StatelessWidget {
         elevation: 0.5,
         title: const Text('Detail Lowongan', style: TextStyle(color: Color(0xFF1A365D))),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Frontend Developer', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A365D))),
-            const SizedBox(height: 8),
-            Text('12 pelamar • 3 hari lagi', style: TextStyle(color: Colors.grey[600])),
-            const SizedBox(height: 16),
-            const Text('Pelamar', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView.separated(
-                itemCount: 8,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  return Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[200]!, width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.person, color: Color(0xFF1A365D)),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(child: Text('Nama Pelamar', style: TextStyle(fontWeight: FontWeight.w600))),
-                        Icon(Icons.chevron_right, color: Colors.grey[400]),
-                      ],
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
+            : _error != null
+                ? ListView(children: [
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(_error!, style: TextStyle(color: Colors.grey[600])),
+                    )
+                  ])
+                : _apps.isEmpty
+                    ? ListView(children: const [
+                        SizedBox(height: 80),
+                        Center(child: Text('Belum ada pelamar')),
+                      ])
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _apps.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, i) => _applicantCard(_apps[i]),
+                      ),
+      ),
+    );
+  }
+
+  Widget _applicantCard(Map<String, dynamic> app) {
+    final pelamar = app['pelamar'] as Map<String, dynamic>?;
+    final name = pelamar?['name'] ?? 'Pelamar';
+    final email = pelamar?['email'] ?? '-';
+    final cvUrl = pelamar?['cv_url'] as String?;
+    final status = (app['status'] ?? '').toString();
+    Color color;
+    switch (status) {
+      case 'lolos':
+      case 'interview':
+        color = Colors.orange;
+        break;
+      case 'diterima':
+        color = Colors.green;
+        break;
+      case 'ditolak':
+        color = Colors.red;
+        break;
+      default:
+        color = const Color(0xFF1A365D);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                    Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color)),
+                child: Text(status.isEmpty ? 'melamar' : status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _ApplicantDetailPage(
+                        application: app,
+                      ),
                     ),
                   );
                 },
+                icon: const Icon(Icons.person_search),
+                label: const Text('Lihat Pelamar'),
               ),
-            ),
-          ],
-        ),
+              if (cvUrl != null)
+                TextButton.icon(onPressed: () => _openUrl(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
+              const Spacer(),
+              _statusMenu(app['id'].toString(), status),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _statusMenu(String applicationId, String current) {
+    return PopupMenuButton<String>(
+      onSelected: (value) async {
+        final res = await ApiService.updateApplicantStatus(applicationId, value);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
+        if (res['success'] == true) _load();
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'melamar', child: Text('Melamar')),
+        PopupMenuItem(value: 'lolos', child: Text('Lolos Screening')),
+        PopupMenuItem(value: 'interview', child: Text('Tahap Interview')),
+        PopupMenuItem(value: 'diterima', child: Text('Diterima')),
+        PopupMenuItem(value: 'ditolak', child: Text('Ditolak')),
+      ],
+      child: OutlinedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.sync_alt, size: 18),
+        label: const Text('Ubah Status'),
+      ),
+    );
+  }
+
+  void _openUrl(String url) {
+    // Can be wired with url_launcher if available; for now show snackbar
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buka: $url')));
+  }
+}
+
+class _ApplicantDetailPage extends StatefulWidget {
+  final Map<String, dynamic> application;
+  const _ApplicantDetailPage({required this.application});
+
+  @override
+  State<_ApplicantDetailPage> createState() => _ApplicantDetailPageState();
+}
+
+class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
+  Map<String, dynamic>? _profile;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final userId = widget.application['user_id']?.toString();
+      if (userId == null) {
+        _error = 'User tidak valid';
+      } else {
+        final res = await ApiService.getAlumniProfileByUserId(userId);
+        if (res['success'] == true) {
+          _profile = res['data'];
+        } else {
+          _error = res['message'];
+        }
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pelamar = widget.application['pelamar'] as Map<String, dynamic>?;
+    final name = pelamar?['name'] ?? 'Pelamar';
+    final email = pelamar?['email'] ?? '-';
+    final cvUrl = pelamar?['cv_url'] as String?;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A365D),
+        elevation: 0.5,
+        title: const Text('Data Pelamar', style: TextStyle(color: Color(0xFF1A365D))),
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
+            : ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                            Text(email, style: TextStyle(color: Colors.grey[600])),
+                          ],
+                        ),
+                      ),
+                      if (cvUrl != null)
+                        TextButton.icon(onPressed: () => _openUrl(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('CV')),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _infoTile('NIM', _profile?['profile']?['nim']),
+                  _infoTile('No. HP', _profile?['profile']?['no_hp']),
+                  _infoTile('Alamat', _profile?['profile']?['alamat']),
+                  _infoTile('Kota', _profile?['profile']?['kota']),
+                  _infoTile('Provinsi', _profile?['profile']?['provinsi']),
+                  _infoTile('Program Studi', _profile?['profile']?['program_studi'] ?? _profile?['profile']?['data_akademik']?['program_studi']),
+                  _infoTile('Angkatan', _profile?['profile']?['angkatan'] ?? _profile?['profile']?['data_akademik']?['tahun_masuk']),
+                  _infoTile('IPK', _profile?['profile']?['ipk']?.toString()),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _infoTile(String label, dynamic value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: TextStyle(color: Colors.grey[600]))),
+          Text(value == null || (value is String && value.isEmpty) ? '-' : value.toString(), style: const TextStyle(color: Color(0xFF1A365D), fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  void _openUrl(String url) {
+    // Implement with url_launcher if available; fallback to snackbar
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buka: $url')));
   }
 }
 
