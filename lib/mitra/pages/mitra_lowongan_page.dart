@@ -502,7 +502,10 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               TextButton.icon(
                 onPressed: () {
@@ -519,8 +522,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
                 label: const Text('Lihat Pelamar'),
               ),
               if (cvUrl != null)
-                TextButton.icon(onPressed: () => _openUrl(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
-              const Spacer(),
+                TextButton.icon(onPressed: () => _openPdf(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
               _statusMenu(app['id'].toString(), status),
             ],
           ),
@@ -555,6 +557,14 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
   void _openUrl(String url) {
     // Can be wired with url_launcher if available; for now show snackbar
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Buka: $url')));
+  }
+
+  void _openPdf(String url) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PdfViewerPage(url: url, title: 'CV Pelamar'),
+      ),
+    );
   }
 }
 
