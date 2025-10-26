@@ -247,7 +247,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
   }
   
   void _viewDocument(String jenisDokumen) {
-    final fileUrl = _fileUrls[jenisDokumen];
+    String? fileUrl = _fileUrls[jenisDokumen];
     if (fileUrl == null || fileUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -258,10 +258,21 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
       return;
     }
     
+    // Fix: Add base URL if the URL is relative
+    // Check if URL starts with http:// or https://
+    final String fullUrl;
+    if (!fileUrl.startsWith('http://') && !fileUrl.startsWith('https://')) {
+      // It's a relative path, add base URL
+      fullUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}$fileUrl';
+      print('🔧 Fixed relative URL to: $fullUrl');
+    } else {
+      fullUrl = fileUrl;
+    }
+    
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PdfViewerPage(
-          url: fileUrl,
+          url: fullUrl,
           title: _dokumenTypes[jenisDokumen] ?? 'Dokumen PDF',
         ),
       ),

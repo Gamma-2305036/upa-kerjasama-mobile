@@ -560,9 +560,17 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
   }
 
   void _openPdf(String url) {
+    // Fix: Add base URL if the URL is relative
+    var fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // It's a relative path, add base URL
+      fullUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}$url';
+      print('🔧 Fixed relative URL to: $fullUrl');
+    }
+    
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PdfViewerPage(url: url, title: 'CV Pelamar'),
+        builder: (_) => PdfViewerPage(url: fullUrl, title: 'CV Pelamar'),
       ),
     );
   }
@@ -997,7 +1005,15 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
   }
 
   void _openPdf(String url) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: url, title: 'CV Pelamar')));
+    // Fix: Add base URL if the URL is relative
+    var fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // It's a relative path, add base URL
+      fullUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}$url';
+      print('🔧 Fixed relative URL to: $fullUrl');
+    }
+    
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: fullUrl, title: 'CV Pelamar')));
   }
 }
 

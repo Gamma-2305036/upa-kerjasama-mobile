@@ -20,8 +20,13 @@ class ApiConfig {
           final base = deviceBase.endsWith('/api') ? deviceBase : '$deviceBase/api';
           return base;
         }
-        // Default emulator host mapping
-        return 'http://10.0.2.2:8000/api';
+        // 🎯 UNTUK HP FISIK - gunakan IP laptop Anda
+        // Ubah IP ini sesuai IP laptop di network hotspot
+        // Cek IP dengan: ipconfig (Windows) atau ifconfig (Linux/Mac)
+        return 'http://10.144.129.8:8000/api';
+        
+        // UNTUK EMULATOR - uncomment line dibawah ini dan comment line diatas
+        // return 'http://10.0.2.2:8000/api';
       case TargetPlatform.iOS:
         return 'http://localhost:8000/api';
       case TargetPlatform.macOS:
@@ -29,8 +34,10 @@ class ApiConfig {
       case TargetPlatform.linux:
         return 'http://localhost:8000/api';
       default:
-        // Device fisik mobile lainnya: ganti IP berikut dengan IP komputer yang menjalankan server Laravel
-        return 'http://192.168.1.100:8000/api';
+        // ⚠️ UNTUK HP FISIK - UBAH IP INI ⚠️
+        // Dari ipconfig Anda, IP Wi-Fi = 10.144.129.8
+        // Jadi ganti line dibawah ini dengan IP laptop Anda
+        return 'http://10.144.129.8:8000/api';  // ⬅️ INI SUDAH BENAR untuk HP Anda!
     }
   }
 }

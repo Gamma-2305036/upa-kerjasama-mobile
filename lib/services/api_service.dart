@@ -47,6 +47,7 @@ class ApiService {
   // Login
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
+      print('📍 Login URL: $baseUrl/login');
       final response = await http
           .post(
         Uri.parse('$baseUrl/login'),
@@ -56,7 +57,7 @@ class ApiService {
           'password': password,
         }),
       )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 30));
 
       final data = jsonDecode(response.body);
       
