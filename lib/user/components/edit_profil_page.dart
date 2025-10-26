@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
+import 'edit_profil_detail_page.dart';
 
 class EditProfilPage extends StatefulWidget {
   const EditProfilPage({super.key});
@@ -14,25 +15,17 @@ class EditProfilPage extends StatefulWidget {
 
 class _EditProfilPageState extends State<EditProfilPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _nimController = TextEditingController();
   final _prodiController = TextEditingController();
   final _angkatanController = TextEditingController();
-  final _alamatController = TextEditingController();
   String? _cvPathLocal; // selected local pdf path
   String? _cvRemoteUrl; // saved cv url from profile
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
     _nimController.dispose();
     _prodiController.dispose();
     _angkatanController.dispose();
-    _alamatController.dispose();
     super.dispose();
   }
 
@@ -42,14 +35,8 @@ class _EditProfilPageState extends State<EditProfilPage> {
     // Load initial values from AuthService
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthService>(context, listen: false);
-      _nameController.text = auth.user?.name ?? _nameController.text;
-      _emailController.text = auth.user?.email ?? _emailController.text;
-
-      // Attempt to fill from alumni profile if present
       final profile = auth.profile;
       try {
-        _phoneController.text = profile?.noHp ?? _phoneController.text;
-        _alamatController.text = profile?.alamat ?? _alamatController.text;
         // Academic prefill
         if (profile != null) {
           _nimController.text = profile?.nim ?? _nimController.text;
@@ -197,66 +184,6 @@ class _EditProfilPageState extends State<EditProfilPage> {
             children: [
               const SizedBox(height: 20),
               
-              // Informasi Pribadi
-              _buildSectionTitle('Informasi Pribadi'),
-              const SizedBox(height: 20),
-              
-              _buildTextField(
-                controller: _nameController,
-                label: 'Nama Lengkap',
-                icon: Icons.person_outline,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Nama lengkap harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              _buildTextField(
-                controller: _emailController,
-                label: 'Email',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Email harus diisi';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Format email tidak valid';
-                  }
-                  return null;
-                },
-              ),
-              
-              _buildTextField(
-                controller: _phoneController,
-                label: 'Nomor Telepon',
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Nomor telepon harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              _buildTextField(
-                controller: _alamatController,
-                label: 'Alamat',
-                icon: Icons.location_on_outlined,
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Alamat harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 30),
-              
               // Informasi Akademik
               _buildSectionTitle('Informasi Akademik'),
               const SizedBox(height: 20),
@@ -298,7 +225,89 @@ class _EditProfilPageState extends State<EditProfilPage> {
                 },
               ),
               
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
+              
+              // Card Edit Detail Profil
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EditProfilDetailPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF1A365D).withOpacity(0.05),
+                        Color(0xFF4E4376).withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Color(0xFF1A365D).withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icon Container
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF1A365D),
+                              Color(0xFF4E4376),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Icon(
+                          Icons.person_outline_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Text Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Detail Profil Lengkap',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A365D),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Kelola informasi pribadi lengkap',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Color(0xFF1A365D).withOpacity(0.5),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 30),
               
               // Tombol Simpan
               Container(
@@ -401,9 +410,6 @@ class _EditProfilPageState extends State<EditProfilPage> {
 
   void _saveProfile() {
     final payload = {
-      'name': _nameController.text.trim(),
-      'no_hp': _phoneController.text.trim(),
-      'alamat': _alamatController.text.trim(),
       'nim': _nimController.text.trim(),
       'program_studi': _prodiController.text.trim(),
       'angkatan': _angkatanController.text.trim(),

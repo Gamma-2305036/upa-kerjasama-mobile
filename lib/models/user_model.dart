@@ -41,6 +41,7 @@ class User {
 class AlumniProfile {
   final String? id;
   final String? nim;
+  final String? nik;
   final String? noHp;
   final String? programStudi; // added: academic field for prefill
   final String? angkatan; // added: academic field for prefill (tahun masuk)
@@ -60,6 +61,7 @@ class AlumniProfile {
   AlumniProfile({
     this.id,
     this.nim,
+    this.nik,
     this.noHp,
     this.programStudi,
     this.angkatan,
@@ -81,6 +83,7 @@ class AlumniProfile {
     return AlumniProfile(
       id: json['id'],
       nim: json['nim'],
+      nik: json['nik'],
       noHp: json['no_hp'],
       // Support both flattened keys from API and nested academic relation keys
       programStudi: json['program_studi'] ?? json['data_akademik']?['program_studi'],

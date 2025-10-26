@@ -633,4 +633,36 @@ class ApiService {
       return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
     }
   }
+
+  // Update alumni detail profile (comprehensive fields)
+  static Future<Map<String, dynamic>> updateAlumniDetail(Map<String, dynamic> payload) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/alumni/profile/detail'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal memperbarui detail profil alumni',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan update detail profil alumni timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
 }
