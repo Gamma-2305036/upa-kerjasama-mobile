@@ -13,6 +13,7 @@ class ApiService {
   static Future<void> initializeToken() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('auth_token');
+    print('API Service: Token initialized: $_token');
   }
 
   // Save token to shared preferences
@@ -853,14 +854,20 @@ class ApiService {
 
   static Future<Map<String, dynamic>> uploadDocument(String jenisDokumen, String filePath) async {
     try {
+      print('API Service: Starting upload for jenis: $jenisDokumen, file: $filePath');
+      print('API Service: Current token: $_token');
+      
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/documents/upload'),
       );
       
-      // Add headers
-      request.headers.addAll(_getHeaders());
-      request.headers.remove('Content-Type');
+      // Add headers (exclude Content-Type for multipart)
+      Map<String, String> headers = _getHeaders();
+      headers.remove('Content-Type');
+      request.headers.addAll(headers);
+      
+      print('API Service: Headers: $headers');
       
       // Add file
       var file = await http.MultipartFile.fromPath('file', filePath);
@@ -868,9 +875,15 @@ class ApiService {
       
       // Add form data
       request.fields['jenis_dokumen'] = jenisDokumen;
+      
+      print('API Service: Request fields: ${request.fields}');
+      print('API Service: Request files count: ${request.files.length}');
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamedResponse);
+      
+      print('API Service: Response status: ${response.statusCode}');
+      print('API Service: Response body: ${response.body}');
       
       final responseData = jsonDecode(response.body);
       
@@ -883,11 +896,13 @@ class ApiService {
         'message': responseData['message'] ?? 'Gagal mengunggah dokumen',
       };
     } on TimeoutException {
+      print('API Service: Upload timeout');
       return {
         'success': false,
         'message': 'Permintaan upload dokumen timeout. Coba lagi.',
       };
     } catch (e) {
+      print('API Service: Upload error: $e');
       return {
         'success': false,
         'message': 'Terjadi kesalahan: ${e.toString()}',

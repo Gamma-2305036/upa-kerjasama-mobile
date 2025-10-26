@@ -15,7 +15,9 @@ class EditDokumenPage extends StatefulWidget {
 class _EditDokumenPageState extends State<EditDokumenPage> {
   final Map<String, String?> _filePaths = {};
   final Map<String, String?> _fileUrls = {};
+  final Map<String, String?> _documentIds = {};
   bool _isLoading = false;
+  bool _hasChanges = false;
 
   final Map<String, String> _dokumenTypes = {
     'cv': 'CV',
@@ -31,29 +33,43 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadDocuments();
+      _loadDocumentsWithLoading();
     });
   }
 
-  void _loadDocuments() async {
+  Future<void> _loadDocuments() async {
+    try {
+      print('Loading documents...');
+      final result = await ApiService.getDocuments();
+      print('Documents result: $result');
+      
+      if (result['success'] == true && result['data'] != null) {
+        final documents = result['data'] as List;
+        print('Found ${documents.length} documents');
+        for (var doc in documents) {
+          final jenisDokumen = doc['jenis_dokumen'] as String?;
+          if (jenisDokumen != null) {
+            _fileUrls[jenisDokumen] = doc['file_url'] as String?;
+            _documentIds[jenisDokumen] = doc['id']?.toString();
+            print('Loaded document: $jenisDokumen -> ${doc['file_url']}');
+          }
+        }
+        setState(() {});
+      } else {
+        print('Failed to load documents: ${result['message']}');
+      }
+    } catch (e) {
+      print('Error loading documents: $e');
+    }
+  }
+
+  Future<void> _loadDocumentsWithLoading() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final result = await ApiService.getDocuments();
-      
-      if (result['success'] == true && result['data'] != null) {
-        final documents = result['data'] as List;
-        for (var doc in documents) {
-          final jenisDokumen = doc['jenis_dokumen'] as String?;
-          if (jenisDokumen != null) {
-            _fileUrls[jenisDokumen] = doc['file_url'] as String?;
-          }
-        }
-      }
-    } catch (e) {
-      print('Error loading documents: $e');
+      await _loadDocuments();
     } finally {
       setState(() {
         _isLoading = false;
@@ -71,6 +87,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
       if (res != null && res.files.single.path != null) {
         setState(() {
           _filePaths[jenisDokumen] = res.files.single.path;
+          _hasChanges = true;
         });
 
         // Upload file
@@ -88,12 +105,16 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
 
   Future<void> _uploadFile(String jenisDokumen, String filePath) async {
     try {
+      print('Uploading file: $filePath for jenis: $jenisDokumen');
       final result = await ApiService.uploadDocument(jenisDokumen, filePath);
+      print('Upload result: $result');
 
       if (result['success'] == true) {
         setState(() {
           _filePaths.remove(jenisDokumen);
           _fileUrls[jenisDokumen] = result['data']['file_url'] as String?;
+          _documentIds[jenisDokumen] = result['data']['id']?.toString();
+          _hasChanges = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,6 +123,9 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Refresh the page to show updated data
+        _loadDocuments();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -129,6 +153,8 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
       if (result['success'] == true) {
         setState(() {
           _fileUrls.remove(jenisDokumen);
+          _documentIds.remove(jenisDokumen);
+          _hasChanges = true;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -137,6 +163,9 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Refresh the page to show updated data
+        _loadDocuments();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -153,6 +182,67 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
         ),
       );
     }
+  }
+
+  Future<void> _saveChanges() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Reload documents to ensure we have the latest state
+      await _loadDocuments();
+      
+      setState(() {
+        _hasChanges = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Perubahan berhasil disimpan!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showDeleteConfirmation(String jenisDokumen, String? documentId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Konfirmasi Hapus'),
+          content: Text('Apakah Anda yakin ingin menghapus dokumen ${_dokumenTypes[jenisDokumen]}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteFile(jenisDokumen, documentId);
+              },
+              child: Text(
+                'Hapus',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -175,6 +265,19 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          if (_hasChanges)
+            TextButton(
+              onPressed: _saveChanges,
+              child: Text(
+                'Simpan',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+        ],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -295,10 +398,25 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
                 IconButton(
                   onPressed: () {
                     // TODO: Implement view PDF
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Fitur lihat dokumen akan segera tersedia'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
                   },
                   icon: Icon(Icons.visibility),
                   color: Color(0xFF1A365D),
                   tooltip: 'Lihat dokumen',
+                ),
+                SizedBox(width: 5),
+                IconButton(
+                  onPressed: () {
+                    _showDeleteConfirmation(jenisDokumen, _documentIds[jenisDokumen]);
+                  },
+                  icon: Icon(Icons.delete),
+                  color: Colors.red,
+                  tooltip: 'Hapus dokumen',
                 ),
               ],
             ],
