@@ -82,36 +82,58 @@ class _EditProfilDetailPageState extends State<EditProfilDetailPage> {
       if (noRekening == null && p is Map) noRekening = p['no_rekening']?.toString();
       if (tentangSaya == null && p is Map) tentangSaya = p['tentang_saya']?.toString();
       
-      _nikController.text = nik ?? '';
-      _jenisKelamin = jenisKelamin;
-      _noHpController.text = noHp ?? '';
-      _tempatLahirController.text = tempatLahir ?? '';
-      _alamatController.text = alamat ?? '';
-      _namaBankController.text = namaBank ?? '';
-      _noRekeningController.text = noRekening ?? '';
-      _tentangSayaController.text = tentangSaya ?? '';
+      setState(() {
+        _nikController.text = nik ?? '';
+        _jenisKelamin = jenisKelamin;
+        _noHpController.text = noHp ?? '';
+        _tempatLahirController.text = tempatLahir ?? '';
+        _alamatController.text = alamat ?? '';
+        _namaBankController.text = namaBank ?? '';
+        _noRekeningController.text = noRekening ?? '';
+        _tentangSayaController.text = tentangSaya ?? '';
 
-      if (tanggalLahir != null) {
-        try {
-          _selectedDate = DateTime.parse(tanggalLahir.toString());
-          _tanggalLahirController.text = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-        } catch (_) {}
-      }
+        if (tanggalLahir != null) {
+          try {
+            _selectedDate = DateTime.parse(tanggalLahir.toString());
+            _tanggalLahirController.text = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+          } catch (_) {}
+        }
+      });
     }
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime(2000),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-        _tanggalLahirController.text = DateFormat('yyyy-MM-dd').format(picked);
-      });
+    try {
+      final DateTime initialDate = _selectedDate ?? DateTime.now().subtract(Duration(days: 365 * 25));
+      
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: initialDate,
+        firstDate: DateTime(1950),
+        lastDate: DateTime.now(),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: Color(0xFF1A365D),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+            ),
+            child: child!,
+          );
+        },
+      );
+      
+      if (picked != null) {
+        setState(() {
+          _selectedDate = picked;
+          _tanggalLahirController.text = DateFormat('yyyy-MM-dd').format(picked);
+        });
+      }
+    } catch (e) {
+      print('Error selecting date: $e');
     }
   }
 
@@ -336,43 +358,56 @@ class _EditProfilDetailPageState extends State<EditProfilDetailPage> {
     String? hintText,
     String? Function(String?)? validator,
   }) {
+    Widget textField = TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      readOnly: readOnly,
+      onTap: onTap,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        prefixIcon: Icon(icon, color: Color(0xFF1A365D)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Color(0xFF1A365D), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: Colors.red, width: 2),
+        ),
+        filled: true,
+        fillColor: readOnly ? Colors.grey[100] : Colors.grey[50],
+      ),
+    );
+    
+    // Wrap with GestureDetector if onTap is provided
+    if (onTap != null && readOnly) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        child: GestureDetector(
+          onTap: onTap,
+          child: textField,
+        ),
+      );
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        readOnly: readOnly,
-        onTap: onTap,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          prefixIcon: Icon(icon, color: Color(0xFF1A365D)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Color(0xFF1A365D), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.red),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.red, width: 2),
-          ),
-          filled: true,
-          fillColor: readOnly ? Colors.grey[100] : Colors.grey[50],
-        ),
-      ),
+      child: textField,
     );
   }
 

@@ -107,8 +107,13 @@ class _EditAcademicInfoPageState extends State<EditAcademicInfoPage> {
       Navigator.pop(context); // Close loading dialog
 
       if (result['success'] == true) {
+        // Refresh user data before closing
         await Provider.of<AuthService>(context, listen: false).refreshUser();
         
+        // Close page to go back
+        Navigator.pop(context);
+        
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Data akademik berhasil diperbarui!'),
@@ -117,7 +122,6 @@ class _EditAcademicInfoPageState extends State<EditAcademicInfoPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
