@@ -5,6 +5,7 @@ import 'pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import 'edit_profil_detail_page.dart';
+import 'edit_academic_info_page.dart';
 
 class EditProfilPage extends StatefulWidget {
   const EditProfilPage({super.key});
@@ -289,6 +290,88 @@ class _EditProfilPageState extends State<EditProfilPage> {
                             const SizedBox(height: 4),
                             Text(
                               'Kelola informasi pribadi lengkap',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Color(0xFF1A365D).withOpacity(0.5),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Card Edit Informasi Akademik
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EditAcademicInfoPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF1A365D).withOpacity(0.05),
+                        Color(0xFF4E4376).withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Color(0xFF1A365D).withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icon Container
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF1A365D),
+                              Color(0xFF4E4376),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Icon(
+                          Icons.school_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Text Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Informasi Akademik',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A365D),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Kelola data akademik lengkap',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: Colors.grey[600],

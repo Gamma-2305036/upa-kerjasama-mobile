@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../login_page.dart';
 import '../../services/auth_service.dart';
 import '../components/edit_profil_page.dart';
-import '../components/edit_academic_info_page.dart';
 import '../components/lamaran_saya_page.dart';
 import '../components/lowongan_tersimpan_page.dart';
 import '../components/notifikasi_page.dart';
@@ -174,19 +173,6 @@ class ProfilePage extends StatelessWidget {
                 );
               },
             ),
-            
-            _buildMenuItem(
-              icon: Icons.school_outlined,
-              title: 'Edit Informasi Akademik',
-              subtitle: 'Kelola data akademik lengkap',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const EditAcademicInfoPage()),
-                );
-              },
-            ),
-            
             
             _buildMenuItem(
               icon: Icons.work_outline,

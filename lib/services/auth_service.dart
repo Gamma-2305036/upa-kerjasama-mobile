@@ -37,7 +37,14 @@ class AuthService extends ChangeNotifier {
       final result = await ApiService.login(email, password);
       
       if (result['success']) {
-        // Load fresh user + profile from backend to ensure consistency after switching accounts/roles
+        // Set user immediately from login response
+        final userData = result['data']['user'];
+        if (userData != null) {
+          _user = User.fromJson(userData);
+          notifyListeners();
+        }
+        
+        // Load fresh profile from backend
         await _loadUserProfile();
         return true;
       } else {
@@ -75,18 +82,21 @@ class AuthService extends ChangeNotifier {
       final result = await ApiService.getProfile();
       
       if (result['success']) {
-        _user = User.fromJson(result['data']['user']);
+        // Update user data from profile response if available
+        if (result['data']['user'] != null) {
+          _user = User.fromJson(result['data']['user']);
+        }
         _profile = _parseProfile(result['data']['profile']);
         notifyListeners();
       } else {
-        // If profile loading fails, clear user data
-        _user = null;
+        // If profile loading fails, keep user data but clear profile
+        // User data from login is still valid
         _profile = null;
         notifyListeners();
       }
     } catch (e) {
-      // If profile loading fails, clear user data
-      _user = null;
+      // If profile loading fails, keep user data but clear profile
+      // User data from login is still valid
       _profile = null;
       notifyListeners();
     }
