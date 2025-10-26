@@ -789,4 +789,171 @@ class ApiService {
     }
   }
 
+  // Family Data methods
+  static Future<Map<String, dynamic>> getFamilyData() async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/family-data'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal mengambil data keluarga',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan data keluarga timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  // Documents methods
+  static Future<Map<String, dynamic>> getDocuments() async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/documents'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal mengambil dokumen',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan dokumen timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadDocument(String jenisDokumen, String filePath) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/documents/upload'),
+      );
+      
+      // Add headers
+      request.headers.addAll(_getHeaders());
+      request.headers.remove('Content-Type');
+      
+      // Add file
+      var file = await http.MultipartFile.fromPath('file', filePath);
+      request.files.add(file);
+      
+      // Add form data
+      request.fields['jenis_dokumen'] = jenisDokumen;
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      final responseData = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      }
+      
+      return {
+        'success': false,
+        'message': responseData['message'] ?? 'Gagal mengunggah dokumen',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan upload dokumen timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteDocument(String documentId) async {
+    try {
+      final response = await http
+          .delete(
+        Uri.parse('$baseUrl/documents/$documentId'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal menghapus dokumen',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan hapus dokumen timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateFamilyData(Map<String, dynamic> data) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/family-data'),
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      }
+      return {
+        'success': false,
+        'message': responseData['message'] ?? 'Gagal memperbarui data keluarga',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan update data keluarga timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
 }

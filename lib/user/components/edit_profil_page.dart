@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
-import 'package:file_picker/file_picker.dart';
-import 'pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import 'edit_profil_detail_page.dart';
 import 'edit_academic_info_page.dart';
+import 'edit_keluarga_page.dart';
+import 'edit_dokumen_page.dart';
 
 class EditProfilPage extends StatefulWidget {
   const EditProfilPage({super.key});
@@ -15,43 +14,10 @@ class EditProfilPage extends StatefulWidget {
 }
 
 class _EditProfilPageState extends State<EditProfilPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nimController = TextEditingController();
-  final _prodiController = TextEditingController();
-  final _angkatanController = TextEditingController();
-  String? _cvPathLocal; // selected local pdf path
-  String? _cvRemoteUrl; // saved cv url from profile
-
-  @override
-  void dispose() {
-    _nimController.dispose();
-    _prodiController.dispose();
-    _angkatanController.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
     super.initState();
-    // Load initial values from AuthService
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = Provider.of<AuthService>(context, listen: false);
-      final profile = auth.profile;
-      try {
-        // Academic prefill
-        if (profile != null) {
-          _nimController.text = profile?.nim ?? _nimController.text;
-          // Prefer typed fields from model; fallback to map if backend returns raw array
-          final dynamic programStudi = (profile as dynamic).programStudi ?? ((profile is Map) ? profile['program_studi'] : null);
-          final dynamic angkatan = (profile as dynamic).angkatan ?? ((profile is Map) ? profile['angkatan'] : null);
-          if (programStudi != null) _prodiController.text = programStudi.toString();
-          if (angkatan != null) _angkatanController.text = angkatan.toString();
-          // Persisted CV url for display
-          final dynamic cv = (profile as dynamic).cvUrl ?? ((profile is Map) ? profile['cv_url'] : null);
-          if (cv != null) setState(() { _cvRemoteUrl = cv.toString(); });
-        }
-      } catch (_) {}
-    });
   }
 
   @override
@@ -178,55 +144,10 @@ class _EditProfilPageState extends State<EditProfilPage> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              
-              // Informasi Akademik
-              _buildSectionTitle('Informasi Akademik'),
-              const SizedBox(height: 20),
-              
-              _buildTextField(
-                controller: _nimController,
-                label: 'NIM',
-                icon: Icons.badge_outlined,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'NIM harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              _buildTextField(
-                controller: _prodiController,
-                label: 'Program Studi',
-                icon: Icons.school_outlined,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Program studi harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              _buildTextField(
-                controller: _angkatanController,
-                label: 'Angkatan',
-                icon: Icons.calendar_today_outlined,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Angkatan harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 30),
               
               // Card Edit Detail Profil
               InkWell(
@@ -390,49 +311,173 @@ class _EditProfilPageState extends State<EditProfilPage> {
                 ),
               ),
               
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
               
-              // Tombol Simpan
-              Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Color(0xFF1A365D),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(15),
-                    onTap: () {
-                      if (_formKey.currentState!.validate()) {
-                        _saveProfile();
-                      }
-                    },
-                    child: Center(
-                      child: Text(
-                        'Simpan Perubahan',
-                        style: TextStyle(
+              // Card Edit Data Keluarga
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EditKeluargaPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF1A365D).withOpacity(0.05),
+                        Color(0xFF4E4376).withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Color(0xFF1A365D).withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icon Container
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF1A365D),
+                              Color(0xFF4E4376),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Icon(
+                          Icons.family_restroom_outlined,
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          size: 28,
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 16),
+                      // Text Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Data Keluarga',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A365D),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Kelola informasi keluarga lengkap',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Color(0xFF1A365D).withOpacity(0.5),
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
               ),
               
               const SizedBox(height: 20),
-              // Upload CV (PDF only)
-              _buildSectionTitle('Curriculum Vitae (PDF)'),
-              const SizedBox(height: 12),
-              _buildCvUploader(),
+              
+              // Card Edit Dokumen Pendukung
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EditDokumenPage()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF1A365D).withOpacity(0.05),
+                        Color(0xFF4E4376).withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Color(0xFF1A365D).withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Icon Container
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF1A365D),
+                              Color(0xFF4E4376),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Icon(
+                          Icons.attachment_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Text Content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Dokumen Pendukung',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A365D),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Kelola dokumen lengkap (CV, KTP, Ijazah, dll)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Color(0xFF1A365D).withOpacity(0.5),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -444,178 +489,5 @@ class _EditProfilPageState extends State<EditProfilPage> {
         color: Color(0xFF1A365D),
       ),
     );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon, color: Color(0xFF1A365D)),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Color(0xFF1A365D), width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.red),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: Colors.red, width: 2),
-          ),
-          filled: true,
-          fillColor: Colors.grey[50],
-        ),
-      ),
-    );
-  }
-
-  void _saveProfile() {
-    final payload = {
-      'nim': _nimController.text.trim(),
-      'program_studi': _prodiController.text.trim(),
-      'angkatan': _angkatanController.text.trim(),
-    };
-
-    ApiService.updateAlumniProfile(payload).then((result) async {
-      if (!mounted) return;
-      if (result['success'] == true) {
-        // Refresh auth user/profile so header reflects latest data
-        await Provider.of<AuthService>(context, listen: false).refreshUser();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Profil berhasil diperbarui!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Gagal memperbarui profil'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-      }
-    });
-  }
-
-  Widget _buildCvUploader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.picture_as_pdf, color: Color(0xFF1A365D)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _cvPathLocal != null
-                      ? _cvPathLocal!.split('/').last
-                      : (_cvRemoteUrl != null ? 'CV tersimpan: ${_cvRemoteUrl!.split('/').last}' : 'Pilih file PDF (maks 5MB)'),
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-              ),
-              TextButton(
-                onPressed: _pickPdf,
-                child: const Text('Pilih File'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_cvRemoteUrl != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: OutlinedButton.icon(
-                onPressed: () => _openPdf(_cvRemoteUrl!),
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Lihat CV Tersimpan'),
-              ),
-            ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A365D),
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(44),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: _cvPathLocal == null ? null : _uploadCv,
-            icon: const Icon(Icons.cloud_upload),
-            label: const Text('Unggah CV'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickPdf() async {
-    try {
-      final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
-      if (res != null && res.files.isNotEmpty) {
-        setState(() {
-          _cvPathLocal = res.files.single.path;
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _uploadCv() async {
-    if (_cvPathLocal == null) return;
-    final res = await ApiService.uploadAlumniCv(_cvPathLocal!);
-    if (!mounted) return;
-    if (res['success'] == true) {
-      await Provider.of<AuthService>(context, listen: false).refreshUser();
-      final auth = Provider.of<AuthService>(context, listen: false);
-      final dynamic cv = (auth.profile as dynamic)?.cvUrl ?? ((auth.profile is Map) ? auth.profile['cv_url'] : null);
-      setState(() { _cvRemoteUrl = cv?.toString(); _cvPathLocal = null; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CV berhasil diunggah'), backgroundColor: Colors.green),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['message'] ?? 'Gagal mengunggah CV'), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  void _openPdf(String url) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: url, title: 'Curriculum Vitae')));
   }
 }
