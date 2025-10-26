@@ -915,6 +915,19 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
     final fileSize = doc['file_size'] ?? doc['ukuran_file'];
     final jenisDokumen = doc['jenis_dokumen'] ?? doc['tipe_dokumen'] ?? 'Dokumen';
     
+    // Map untuk jenis dokumen
+    final Map<String, String> dokumenTypes = {
+      'cv': 'CV',
+      'ktp': 'KTP',
+      'ijazah': 'Ijazah/SKL',
+      'transkrip': 'Transkrip Nilai',
+      'sertifikat': 'Sertifikat',
+      'portofolio': 'Portofolio',
+      'lainnya': 'Dokumen Lainnya',
+    };
+    
+    final title = dokumenTypes[jenisDokumen] ?? jenisDokumen;
+    
     String formatFileSize(int? bytes) {
       if (bytes == null) return '';
       if (bytes < 1024) return '$bytes B';
@@ -966,7 +979,7 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
             ),
           ),
           IconButton(
-            onPressed: fileUrl.isNotEmpty ? () => _openPdf(fileUrl) : null,
+            onPressed: fileUrl.isNotEmpty ? () => _openPdf(fileUrl, title: title) : null,
             icon: const Icon(Icons.visibility, color: Color(0xFF1A365D)),
           ),
         ],
@@ -1004,7 +1017,7 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
     );
   }
 
-  void _openPdf(String url) {
+  void _openPdf(String url, {String title = 'Dokumen PDF'}) {
     // Fix: Add base URL if the URL is relative
     var fullUrl = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -1013,7 +1026,7 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
       print('🔧 Fixed relative URL to: $fullUrl');
     }
     
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: fullUrl, title: 'CV Pelamar')));
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: fullUrl, title: title)));
   }
 }
 
