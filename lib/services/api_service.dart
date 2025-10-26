@@ -665,4 +665,128 @@ class ApiService {
       };
     }
   }
+
+  // Academic Data methods
+  static Future<Map<String, dynamic>> getAcademicData() async {
+    try {
+      final response = await http
+          .get(
+        Uri.parse('$baseUrl/academic-data'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal mengambil data akademik',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan data akademik timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> createAcademicData(Map<String, dynamic> data) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/academic-data'),
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 201 && responseData['success'] == true) {
+        return responseData;
+      }
+      return {
+        'success': false,
+        'message': responseData['message'] ?? 'Gagal membuat data akademik',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan buat data akademik timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateAcademicData(Map<String, dynamic> data) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/academic-data'),
+        headers: _getHeaders(),
+        body: jsonEncode(data),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return responseData;
+      }
+      return {
+        'success': false,
+        'message': responseData['message'] ?? 'Gagal memperbarui data akademik',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan update data akademik timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteAcademicData(String id) async {
+    try {
+      final response = await http
+          .delete(
+        Uri.parse('$baseUrl/academic-data/$id'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Gagal menghapus data akademik',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan hapus data akademik timeout. Coba lagi.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
 }

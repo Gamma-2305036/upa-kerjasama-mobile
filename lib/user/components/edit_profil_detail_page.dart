@@ -333,6 +333,7 @@ class _EditProfilDetailPageState extends State<EditProfilDetailPage> {
     int maxLines = 1,
     bool readOnly = false,
     VoidCallback? onTap,
+    String? hintText,
     String? Function(String?)? validator,
   }) {
     return Container(
@@ -346,6 +347,7 @@ class _EditProfilDetailPageState extends State<EditProfilDetailPage> {
         validator: validator,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
           prefixIcon: Icon(icon, color: Color(0xFF1A365D)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
