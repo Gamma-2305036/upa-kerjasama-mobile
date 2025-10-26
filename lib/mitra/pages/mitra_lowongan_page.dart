@@ -576,15 +576,27 @@ class _ApplicantDetailPage extends StatefulWidget {
   State<_ApplicantDetailPage> createState() => _ApplicantDetailPageState();
 }
 
-class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
+class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _profile;
+  Map<String, dynamic>? _dataAkademik;
+  Map<String, dynamic>? _dataKeluarga;
+  List<Map<String, dynamic>>? _dokumenPendukung;
+  String? _cvUrl;
   bool _loading = false;
   String? _error;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -596,7 +608,21 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
       } else {
         final res = await ApiService.getAlumniProfileByUserId(userId);
         if (res['success'] == true) {
-          _profile = res['data'];
+          setState(() {
+            _profile = res['data']?['profile'];
+            _dataAkademik = res['data']?['data_akademik'];
+            _dataKeluarga = res['data']?['data_keluarga'];
+            
+            // Get dokumen pendukung
+            final dk = res['data']?['dokumen_pendukung'];
+            if (dk != null && dk is List) {
+              _dokumenPendukung = dk.map((e) => e as Map<String, dynamic>).toList();
+            }
+            
+            // Get CV URL from profile
+            _cvUrl = res['data']?['cv_url'] as String? ?? 
+                     _profile?['cv_url'] as String?;
+          });
         } else {
           _error = res['message'];
         }
@@ -613,77 +639,358 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> {
     final pelamar = widget.application['pelamar'] as Map<String, dynamic>?;
     final name = pelamar?['name'] ?? 'Pelamar';
     final email = pelamar?['email'] ?? '-';
-    final cvUrl = pelamar?['cv_url'] as String?;
+    final cvUrl = _cvUrl ?? pelamar?['cv_url'] as String?;
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1A365D),
         elevation: 0.5,
         title: const Text('Data Pelamar', style: TextStyle(color: Color(0xFF1A365D))),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF1A365D),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF1A365D),
+          tabs: const [
+            Tab(text: 'Data Pribadi', icon: Icon(Icons.person)),
+            Tab(text: 'Akademik', icon: Icon(Icons.school)),
+            Tab(text: 'Keluarga', icon: Icon(Icons.family_restroom)),
+            Tab(text: 'File', icon: Icon(Icons.folder)),
+          ],
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Row(
+            : _error != null
+                ? Center(child: Text(_error!, style: TextStyle(color: Colors.grey[600])))
+                : Column(
                     children: [
                       Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.person, color: Color(0xFF1A365D)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        color: Colors.white,
+                        child: Row(
                           children: [
-                            Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
-                            Text(email, style: TextStyle(color: Colors.grey[600])),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                              child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                                  Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      if (cvUrl != null)
-                        TextButton.icon(onPressed: () => _openPdf(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildDataPribadiTab(),
+                            _buildDataAkademikTab(),
+                            _buildDataKeluargaTab(),
+                            _buildFileTab(cvUrl),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                _infoTile('NIM', _profile?['profile']?['nim']),
-                  _infoTile('No. HP', _profile?['profile']?['no_hp']),
-                  _infoTile('Alamat', _profile?['profile']?['alamat']),
-                  _infoTile('Kota', _profile?['profile']?['kota']),
-                  _infoTile('Provinsi', _profile?['profile']?['provinsi']),
-                  _infoTile('Program Studi', _profile?['profile']?['program_studi'] ?? _profile?['profile']?['data_akademik']?['program_studi']),
-                  _infoTile('Angkatan', _profile?['profile']?['angkatan'] ?? _profile?['profile']?['data_akademik']?['tahun_masuk']),
-                  _infoTile('IPK', _profile?['profile']?['ipk']?.toString()),
-                const SizedBox(height: 12),
-                if (cvUrl == null)
-                  Builder(builder: (_) {
-                    final alt = _profile?['profile']?['cv_url'] as String?;
-                    return (alt != null)
-                        ? Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton.icon(onPressed: () => _openPdf(alt), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),)
-                        : const SizedBox.shrink();
-                  }),
-                ],
-              ),
       ),
     );
   }
 
+  Widget _buildDataPribadiTab() {
+    final profile = _profile;
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _infoTile('NIM', profile?['nim']),
+        _infoTile('NIK', profile?['nik']),
+        _infoTile('No. HP', profile?['no_hp']),
+        _infoTile('Tempat Lahir', profile?['tempat_lahir']),
+        _infoTile('Tanggal Lahir', profile?['tanggal_lahir']),
+        _infoTile('Jenis Kelamin', profile?['jenis_kelamin']),
+        _infoTile('Alamat', profile?['alamat']),
+        _infoTile('Kota', profile?['kota']),
+        _infoTile('Provinsi', profile?['provinsi']),
+        _infoTile('Kode Pos', profile?['kode_pos']),
+        _infoTile('Nama Bank', profile?['nama_bank']),
+        _infoTile('No. Rekening', profile?['no_rekening']),
+        if (profile?['tentang_saya'] != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tentang Saya', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Text(profile?['tentang_saya'] ?? '-', style: const TextStyle(color: Color(0xFF1A365D))),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDataAkademikTab() {
+    final akademik = _dataAkademik;
+    if (akademik == null) {
+      return const Center(child: Text('Data akademik belum diisi'));
+    }
+    
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _infoTile('NIM', akademik['nim']),
+        _infoTile('Program Studi', akademik['program_studi']),
+        _infoTile('Universitas', akademik['universitas']),
+        _infoTile('Tahun Masuk', akademik['tahun_masuk']?.toString()),
+        _infoTile('Tahun Lulus', akademik['tahun_lulus']?.toString()),
+        _infoTile('IPK', akademik['ipk']?.toString()),
+        if (akademik['hard_skill'] != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hard Skill', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Text(akademik['hard_skill'] ?? '-', style: const TextStyle(color: Color(0xFF1A365D))),
+              ],
+            ),
+          ),
+        ],
+        if (akademik['soft_skill'] != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Soft Skill', style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Text(akademik['soft_skill'] ?? '-', style: const TextStyle(color: Color(0xFF1A365D))),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDataKeluargaTab() {
+    final keluarga = _dataKeluarga;
+    if (keluarga == null) {
+      return const Center(child: Text('Data keluarga belum diisi'));
+    }
+    
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _sectionHeader('Data Ayah'),
+        _infoTile('Nama Ayah', keluarga['nama_ayah']),
+        _infoTile('Pekerjaan Ayah', keluarga['pekerjaan_ayah']),
+        const SizedBox(height: 10),
+        _sectionHeader('Data Ibu'),
+        _infoTile('Nama Ibu', keluarga['nama_ibu']),
+        _infoTile('Pekerjaan Ibu', keluarga['pekerjaan_ibu']),
+        const SizedBox(height: 10),
+        _sectionHeader('Data Wali'),
+        _infoTile('Nama Wali', keluarga['nama_wali']),
+        _infoTile('Pekerjaan Wali', keluarga['pekerjaan_wali']),
+        const SizedBox(height: 10),
+        _sectionHeader('Data Keluarga'),
+        _infoTile('Jumlah Saudara', keluarga['jumlah_saudara']?.toString()),
+        _infoTile('Alamat Keluarga', keluarga['alamat_keluarga']),
+      ],
+    );
+  }
+
+  Widget _buildFileTab(String? cvUrl) {
+    final docs = _dokumenPendukung ?? [];
+    final hasDocuments = (cvUrl != null && cvUrl.isNotEmpty) || docs.isNotEmpty;
+    
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // CV Section
+        if (cvUrl != null && cvUrl.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.picture_as_pdf, size: 48, color: Color(0xFF1A365D)),
+                const SizedBox(height: 12),
+                const Text('CV Pelamar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openPdf(cvUrl),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A365D),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    icon: const Icon(Icons.visibility, size: 20),
+                    label: const Text('Lihat CV'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        
+        if (cvUrl != null && cvUrl.isNotEmpty && docs.isNotEmpty)
+          const SizedBox(height: 16),
+        
+        // Supporting Documents Section
+        if (docs.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('Dokumen Pendukung', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+          const SizedBox(height: 12),
+          ...docs.map((doc) => _documentCard(doc)).toList(),
+        ],
+        
+        // Empty state
+        if (!hasDocuments)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.folder_off, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Belum ada dokumen',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Pelamar belum mengunggah CV atau dokumen',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+  
+  Widget _documentCard(Map<String, dynamic> doc) {
+    final fileName = doc['file_name'] ?? doc['nama_dokumen'] ?? 'Dokumen';
+    final fileUrl = doc['file_url'] ?? doc['path_file'] ?? '';
+    final fileSize = doc['file_size'] ?? doc['ukuran_file'];
+    final jenisDokumen = doc['jenis_dokumen'] ?? doc['tipe_dokumen'] ?? 'Dokumen';
+    
+    String formatFileSize(int? bytes) {
+      if (bytes == null) return '';
+      if (bytes < 1024) return '$bytes B';
+      if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A365D).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.insert_drive_file, color: Color(0xFF1A365D)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fileName,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1A365D)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  jenisDokumen,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                if (fileSize != null)
+                  Text(
+                    formatFileSize(fileSize),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: fileUrl.isNotEmpty ? () => _openPdf(fileUrl) : null,
+            icon: const Icon(Icons.visibility, color: Color(0xFF1A365D)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(title, style: const TextStyle(color: Color(0xFF1A365D), fontWeight: FontWeight.w700, fontSize: 16)),
+    );
+  }
+
   Widget _infoTile(String label, dynamic value) {
+    final displayValue = value == null || (value is String && value.isEmpty) ? '-' : value.toString();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label, style: TextStyle(color: Colors.grey[600]))),
-          Text(value == null || (value is String && value.isEmpty) ? '-' : value.toString(), style: const TextStyle(color: Color(0xFF1A365D), fontWeight: FontWeight.w600)),
+          Expanded(
+            flex: 2,
+            child: Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 3,
+            child: Text(displayValue, style: const TextStyle(color: Color(0xFF1A365D), fontWeight: FontWeight.w600), textAlign: TextAlign.right),
+          ),
         ],
       ),
     );

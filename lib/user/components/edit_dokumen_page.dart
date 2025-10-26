@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'pdf_viewer_page.dart';
 
 class EditDokumenPage extends StatefulWidget {
   const EditDokumenPage({super.key});
@@ -244,6 +245,28 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
       },
     );
   }
+  
+  void _viewDocument(String jenisDokumen) {
+    final fileUrl = _fileUrls[jenisDokumen];
+    if (fileUrl == null || fileUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('URL dokumen tidak tersedia'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PdfViewerPage(
+          url: fileUrl,
+          title: _dokumenTypes[jenisDokumen] ?? 'Dokumen PDF',
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -396,15 +419,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
               if (_fileUrls[jenisDokumen] != null) ...[
                 SizedBox(width: 10),
                 IconButton(
-                  onPressed: () {
-                    // TODO: Implement view PDF
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Fitur lihat dokumen akan segera tersedia'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                  },
+                  onPressed: () => _viewDocument(jenisDokumen),
                   icon: Icon(Icons.visibility),
                   color: Color(0xFF1A365D),
                   tooltip: 'Lihat dokumen',
