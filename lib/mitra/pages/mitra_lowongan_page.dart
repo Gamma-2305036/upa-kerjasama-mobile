@@ -534,10 +534,29 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
   Widget _statusMenu(String applicationId, String current) {
     return PopupMenuButton<String>(
       onSelected: (value) async {
-        final res = await ApiService.updateApplicantStatus(applicationId, value);
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => _ConfirmStatusDialog(status: value),
+        );
+        if (confirmed != true) return;
+
+        final res = await showDialog<Map<String, String>?>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => _EmailFormDialog(status: value),
+        );
+
+        if (res == null) return; // cancelled
+
+        final apiRes = await ApiService.updateApplicantStatus(
+          applicationId,
+          value,
+          subject: res['subject'],
+          message: res['message'],
+        );
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
-        if (res['success'] == true) _load();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiRes['message'] ?? 'Diperbarui')));
+        if (apiRes['success'] == true) _load();
       },
       itemBuilder: (_) => const [
         PopupMenuItem(value: 'melamar', child: Text('Melamar')),
@@ -551,6 +570,109 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
         icon: const Icon(Icons.sync_alt, size: 18),
         label: const Text('Ubah Status'),
       ),
+    );
+  }
+
+  // Dialog konfirmasi singkat
+  Widget _ConfirmStatusDialog({required String status}) {
+    String label;
+    switch (status) {
+      case 'lolos':
+        label = 'Lolos Screening';
+        break;
+      case 'interview':
+        label = 'Tahap Interview';
+        break;
+      case 'diterima':
+        label = 'Diterima';
+        break;
+      case 'ditolak':
+        label = 'Ditolak';
+        break;
+      default:
+        label = 'Melamar';
+    }
+    return AlertDialog(
+      title: const Text('Konfirmasi Perubahan'),
+      content: Text('Yakin ubah status pelamar menjadi "$label"?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Lanjut')),
+      ],
+    );
+  }
+
+  // Dialog form email: subject dan message
+  Widget _EmailFormDialog({required String status}) {
+    final subjectController = TextEditingController();
+    final messageController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    // Subjek default sesuai status
+    String defaultSubject;
+    switch (status) {
+      case 'lolos':
+        defaultSubject = 'Informasi: Anda Lolos Screening';
+        break;
+      case 'interview':
+        defaultSubject = 'Undangan Interview';
+        break;
+      case 'diterima':
+        defaultSubject = 'Selamat! Anda Diterima';
+        break;
+      case 'ditolak':
+        defaultSubject = 'Informasi Hasil Lamaran';
+        break;
+      default:
+        defaultSubject = 'Update Status Lamaran';
+    }
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      subjectController.text = defaultSubject;
+    });
+
+    return AlertDialog(
+      title: const Text('Kirim Email ke Pelamar'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: subjectController,
+                decoration: const InputDecoration(labelText: 'Subjek'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Subjek wajib diisi' : null,
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: messageController,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Pesan',
+                  alignLabelWithHint: true,
+                  hintText: 'Tulis pesan untuk pelamar...'
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Pesan wajib diisi' : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Batal')),
+        ElevatedButton(
+          onPressed: () {
+            if (!formKey.currentState!.validate()) return;
+            Navigator.pop<Map<String, String>>(context, {
+              'subject': subjectController.text.trim(),
+              'message': messageController.text.trim(),
+            });
+          },
+          child: const Text('Kirim'),
+        ),
+      ],
     );
   }
 

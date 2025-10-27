@@ -221,6 +221,63 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
               ],
             ),
             
+            // Tampilkan subject dan message jika ada
+            if (application['subject'] != null && application['subject'].toString().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF1A365D).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Color(0xFF1A365D).withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.email_outlined, size: 16, color: Color(0xFF1A365D)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Pesan dari Perusahaan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A365D),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (application['subject'] != null && application['subject'].toString().isNotEmpty)
+                      Text(
+                        application['subject'].toString(),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    if (application['message'] != null && application['message'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        application['message'].toString(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[700],
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            
             const SizedBox(height: 15),
             
             // Detail lamaran
@@ -254,9 +311,9 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
             if (status == 'melamar' || status == 'pending')
               _buildPendingActions()
             else if (status == 'diterima')
-              _buildAcceptedActions()
+              _buildAcceptedActions(application)
             else if (status == 'ditolak')
-              _buildRejectedActions(),
+              _buildRejectedActions(application),
           ],
         ),
       ),
@@ -328,46 +385,51 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  Widget _buildAcceptedActions() {
+  Widget _buildAcceptedActions(Map<String, dynamic> application) {
+    final hasMessage = (application['subject'] != null && application['subject'].toString().isNotEmpty) ||
+                       (application['message'] != null && application['message'].toString().isNotEmpty);
+    
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.green[200]!),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
+        if (hasMessage) ...[
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.green[50],
                 borderRadius: BorderRadius.circular(10),
-                onTap: () {
-                  _showCongratulationsDialog();
-                },
-                child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.celebration, color: Colors.green[600], size: 16),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Selamat!',
-                        style: TextStyle(
-                          color: Colors.green[600],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    _showCongratulationsDialog(application);
+                  },
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.celebration, color: Colors.green[600], size: 16),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Lihat Pesan',
+                          style: TextStyle(
+                            color: Colors.green[600],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
+          const SizedBox(width: 10),
+        ],
         Expanded(
           child: Container(
             height: 40,
@@ -400,39 +462,44 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  Widget _buildRejectedActions() {
+  Widget _buildRejectedActions(Map<String, dynamic> application) {
+    final hasFeedback = (application['subject'] != null && application['subject'].toString().isNotEmpty) ||
+                       (application['message'] != null && application['message'].toString().isNotEmpty);
+    
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.red[200]!),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
+        if (hasFeedback) ...[
+          Expanded(
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.red[50],
                 borderRadius: BorderRadius.circular(10),
-                onTap: () {
-                  _showFeedbackDialog();
-                },
-                child: Center(
-                  child: Text(
-                    'Lihat Feedback',
-                    style: TextStyle(
-                      color: Colors.red[600],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    _showFeedbackDialog(application);
+                  },
+                  child: Center(
+                    child: Text(
+                      'Lihat Feedback',
+                      style: TextStyle(
+                        color: Colors.red[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
+          const SizedBox(width: 10),
+        ],
         Expanded(
           child: Container(
             height: 40,
@@ -500,7 +567,10 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  void _showCongratulationsDialog() {
+  void _showCongratulationsDialog(Map<String, dynamic> application) {
+    final subject = application['subject'] as String?;
+    final message = application['message'] as String?;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -509,10 +579,14 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
           children: [
             Icon(Icons.celebration, color: Colors.green),
             const SizedBox(width: 10),
-            Text('Selamat!'),
+            Expanded(
+              child: Text(subject ?? 'Selamat!'),
+            ),
           ],
         ),
-        content: Text('Lamaran Anda diterima! Silakan hubungi perusahaan untuk langkah selanjutnya.'),
+        content: SingleChildScrollView(
+          child: Text(message ?? 'Lamaran Anda diterima! Silakan hubungi perusahaan untuk langkah selanjutnya.'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -523,13 +597,18 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  void _showFeedbackDialog() {
+  void _showFeedbackDialog(Map<String, dynamic> application) {
+    final subject = application['subject'] as String?;
+    final message = application['message'] as String?;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Feedback'),
-        content: Text('Terima kasih atas lamaran Anda. Sayangnya, untuk saat ini posisi ini sudah terisi. Silakan coba lowongan lain yang sesuai dengan kualifikasi Anda.'),
+        title: Text(subject ?? 'Feedback'),
+        content: SingleChildScrollView(
+          child: Text(message ?? 'Terima kasih atas lamaran Anda. Sayangnya, untuk saat ini posisi ini sudah terisi. Silakan coba lowongan lain yang sesuai dengan kualifikasi Anda.'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

@@ -436,13 +436,22 @@ class ApiService {
   }
 
   // Mitra: update applicant status
-  static Future<Map<String, dynamic>> updateApplicantStatus(String applicationId, String status) async {
+  static Future<Map<String, dynamic>> updateApplicantStatus(
+    String applicationId,
+    String status, {
+    String? subject,
+    String? message,
+  }) async {
     try {
+      final Map<String, dynamic> payload = {'status': status};
+      if (subject != null && subject.isNotEmpty) payload['subject'] = subject;
+      if (message != null && message.isNotEmpty) payload['message'] = message;
+
       final response = await http
           .put(
         Uri.parse('$baseUrl/applications/$applicationId/status'),
         headers: _getHeaders(),
-        body: jsonEncode({'status': status}),
+        body: jsonEncode(payload),
       )
           .timeout(const Duration(seconds: 15));
       final data = jsonDecode(response.body);
