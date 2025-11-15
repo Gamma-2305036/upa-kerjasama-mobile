@@ -326,16 +326,87 @@ class ApiService {
   }
 
   // Get jobs owned by the logged-in mitra
-  static Future<Map<String, dynamic>> getMyJobs() async {
+  static Future<Map<String, dynamic>> getMyJobs({bool archived = false, String? search, int retryCount = 0}) async {
+    const maxRetries = 2;
     try {
+      String url = '$baseUrl/mitra/jobs';
+      List<String> params = [];
+      
+      if (archived) {
+        params.add('archived=true');
+      }
+      
+      if (search != null && search.isNotEmpty) {
+        params.add('search=${Uri.encodeComponent(search)}');
+      }
+      
+      if (params.isNotEmpty) {
+        url += '?${params.join('&')}';
+      }
       final response = await http
           .get(
-        Uri.parse('$baseUrl/mitra/jobs'),
+        Uri.parse(url),
         headers: _getHeaders(),
       )
-          .timeout(const Duration(seconds: 20));
+          .timeout(const Duration(seconds: 30)); // Increase timeout
 
-      final data = jsonDecode(response.body);
+      // Validate response body
+      if (response.body.isEmpty) {
+        if (retryCount < maxRetries) {
+          await Future.delayed(const Duration(seconds: 1));
+          return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+        }
+        return {
+          'success': false,
+          'message': 'Response kosong dari server',
+        };
+      }
+
+      // Check if response body looks like valid JSON
+      final body = response.body.trim();
+      if (!body.startsWith('{') && !body.startsWith('[')) {
+        if (retryCount < maxRetries) {
+          await Future.delayed(const Duration(seconds: 1));
+          return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+        }
+        return {
+          'success': false,
+          'message': 'Format response tidak valid',
+        };
+      }
+
+      // Check if JSON is complete (ends with } or ])
+      if (!body.endsWith('}') && !body.endsWith(']')) {
+        if (retryCount < maxRetries) {
+          await Future.delayed(const Duration(seconds: 1));
+          return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+        }
+        return {
+          'success': false,
+          'message': 'Response JSON tidak lengkap. Silakan refresh halaman.',
+        };
+      }
+
+      Map<String, dynamic> data;
+      try {
+        data = jsonDecode(body) as Map<String, dynamic>;
+      } on FormatException catch (e) {
+        // Log untuk debugging
+        print('JSON Parse Error: ${e.toString()}');
+        print('Response length: ${body.length}');
+        print('Response preview: ${body.substring(0, body.length > 500 ? 500 : body.length)}');
+        
+        // Retry jika masih ada kesempatan
+        if (retryCount < maxRetries) {
+          await Future.delayed(const Duration(seconds: 1));
+          return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+        }
+        
+        return {
+          'success': false,
+          'message': 'Gagal memparse data dari server. Silakan refresh halaman.',
+        };
+      }
 
       if (response.statusCode == 200 && data['success']) {
         return data;
@@ -346,11 +417,19 @@ class ApiService {
         };
       }
     } on TimeoutException {
+      if (retryCount < maxRetries) {
+        await Future.delayed(const Duration(seconds: 1));
+        return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+      }
       return {
         'success': false,
         'message': 'Permintaan data lowongan mitra timeout. Coba lagi.',
       };
     } catch (e) {
+      if (retryCount < maxRetries) {
+        await Future.delayed(const Duration(seconds: 1));
+        return getMyJobs(archived: archived, search: search, retryCount: retryCount + 1);
+      }
       return {
         'success': false,
         'message': 'Terjadi kesalahan: ${e.toString()}',
@@ -449,6 +528,42 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['success']) return data;
       return {'success': false, 'message': data['message'] ?? 'Gagal memperbarui status lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Archive job (mitra)
+  static Future<Map<String, dynamic>> archiveJob(String jobId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId/archive'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengarsipkan lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Unarchive job (mitra)
+  static Future<Map<String, dynamic>> unarchiveJob(String jobId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId/unarchive'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengembalikan lowongan dari arsip'};
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
     }

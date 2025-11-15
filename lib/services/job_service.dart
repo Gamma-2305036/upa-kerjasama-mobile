@@ -41,29 +41,48 @@ class JobService extends ChangeNotifier {
   }
 
   // Get jobs for current mitra only
-  Future<void> getMyJobs({bool refresh = false}) async {
+  Future<void> getMyJobs({bool refresh = false, bool archived = false, String? search}) async {
     if (refresh) {
       _jobs.clear();
+      notifyListeners(); // Notify immediately when clearing
     }
 
     _setLoading(true);
     _clearError();
+    notifyListeners(); // Notify loading state
 
     try {
-      final result = await ApiService.getMyJobs();
+      final result = await ApiService.getMyJobs(archived: archived, search: search);
 
       if (result['success']) {
-        final List<dynamic> jobsData = result['data'];
-        _jobs = jobsData.map((job) => Job.fromJson(job)).toList();
-        _pagination = null;
-        notifyListeners();
+        try {
+          final jobsData = result['data'];
+          if (jobsData is List) {
+            _jobs = jobsData.map((job) {
+              try {
+                return Job.fromJson(job as Map<String, dynamic>);
+              } catch (e) {
+                print('Error parsing job: $e');
+                return null;
+              }
+            }).whereType<Job>().toList();
+          } else {
+            _jobs = [];
+          }
+          _pagination = null;
+        } catch (e) {
+          print('Error processing jobs data: $e');
+          _setError('Gagal memproses data lowongan. Silakan refresh halaman.');
+        }
       } else {
-        _setError(result['message']);
+        _setError(result['message'] ?? 'Gagal mengambil data lowongan');
       }
     } catch (e) {
+      print('Error in getMyJobs: $e');
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       _setLoading(false);
+      notifyListeners(); // Always notify after loading completes
     }
   }
 
@@ -117,7 +136,8 @@ class JobService extends ChangeNotifier {
       _setLoading(true);
       final result = await ApiService.activateJob(jobId);
       if (result['success'] == true) {
-        await getMyJobs(refresh: true);
+        // Don't auto-refresh here, let UI handle it with correct archived parameter
+        // This prevents data from being overwritten
       } else {
         _setError(result['message'] ?? 'Gagal mengaktifkan lowongan');
       }
@@ -128,13 +148,51 @@ class JobService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> updateJobStatus(String jobId, {bool? statusAktif, String? tanggalSelesai}) async {
-    final result = await ApiService.updateJobStatus(jobId, statusAktif: statusAktif, tanggalSelesai: tanggalSelesai);
-    if (result['success'] == true) {
-      await getMyJobs(refresh: true);
-    } else {
-      _setError(result['message'] ?? 'Gagal memperbarui status lowongan');
+    try {
+      _setLoading(true);
+      final result = await ApiService.updateJobStatus(jobId, statusAktif: statusAktif, tanggalSelesai: tanggalSelesai);
+      if (result['success'] == true) {
+        // Don't auto-refresh here, let UI handle it with correct archived parameter
+        // This prevents data from being overwritten
+      } else {
+        _setError(result['message'] ?? 'Gagal memperbarui status lowongan');
+      }
+      return result;
+    } finally {
+      _setLoading(false);
     }
-    return result;
+  }
+
+  Future<Map<String, dynamic>> archiveJob(String jobId) async {
+    try {
+      _setLoading(true);
+      final result = await ApiService.archiveJob(jobId);
+      if (result['success'] == true) {
+        // Don't auto-refresh here, let UI handle it with correct archived parameter
+        // This prevents data from being overwritten
+      } else {
+        _setError(result['message'] ?? 'Gagal mengarsipkan lowongan');
+      }
+      return result;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<Map<String, dynamic>> unarchiveJob(String jobId) async {
+    try {
+      _setLoading(true);
+      final result = await ApiService.unarchiveJob(jobId);
+      if (result['success'] == true) {
+        // Don't auto-refresh here, let UI handle it with correct archived parameter
+        // This prevents data from being overwritten
+      } else {
+        _setError(result['message'] ?? 'Gagal mengembalikan lowongan dari arsip');
+      }
+      return result;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // Get job detail

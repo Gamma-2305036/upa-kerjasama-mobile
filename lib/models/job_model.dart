@@ -17,6 +17,7 @@ class Job {
   final String? tanggalPenerimaanLamaran;
   final String? tanggalSelesai;
   final bool? statusAktif;
+  final String? archivedAt;
   final String? createdAt;
   final String? updatedAt;
   final MitraCompany? mitraPerusahaan;
@@ -38,6 +39,7 @@ class Job {
     this.tanggalPenerimaanLamaran,
     this.tanggalSelesai,
     this.statusAktif,
+    this.archivedAt,
     this.createdAt,
     this.updatedAt,
     this.mitraPerusahaan,
@@ -62,6 +64,7 @@ class Job {
       tanggalPenerimaanLamaran: json['tanggal_penerimaan_lamaran'],
       tanggalSelesai: json['tanggal_selesai'],
       statusAktif: json['status_aktif'],
+      archivedAt: json['archived_at'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
       mitraPerusahaan: json['mitra_perusahaan'] != null 
@@ -88,6 +91,7 @@ class Job {
       'tanggal_penerimaan_lamaran': tanggalPenerimaanLamaran,
       'tanggal_selesai': tanggalSelesai,
       'status_aktif': statusAktif,
+      'archived_at': archivedAt,
       'created_at': createdAt,
       'updated_at': updatedAt,
       'mitra_perusahaan': mitraPerusahaan?.toJson(),

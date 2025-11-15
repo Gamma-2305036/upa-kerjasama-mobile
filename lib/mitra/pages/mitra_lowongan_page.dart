@@ -17,12 +17,51 @@ class MitraLowonganPage extends StatefulWidget {
   State<MitraLowonganPage> createState() => _MitraLowonganPageState();
 }
 
-class _MitraLowonganPageState extends State<MitraLowonganPage> {
+class _MitraLowonganPageState extends State<MitraLowonganPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  bool _isArchivedTab = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final newIsArchived = _tabController.index == 1;
+        if (newIsArchived != _isArchivedTab) {
+          setState(() {
+            _isArchivedTab = newIsArchived;
+            // Keep search query when switching tabs
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab, search: _searchQuery.isNotEmpty ? _searchQuery : null);
+          });
+        }
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true);
+      Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: false, search: null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+    // Debounce search
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == value && mounted) {
+        Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab, search: value.isNotEmpty ? value : null);
+      }
     });
   }
 
@@ -33,6 +72,8 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
       body: Column(
         children: [
           _buildHeader(),
+          _buildTabBar(),
+          _buildSearchBar(),
           Expanded(child: _buildContent(context)),
         ],
       ),
@@ -45,6 +86,58 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: Colors.white,
+      child: TabBar(
+        controller: _tabController,
+        labelColor: const Color(0xFF1A365D),
+        unselectedLabelColor: Colors.grey,
+        indicatorColor: const Color(0xFF1A365D),
+        tabs: const [
+          Tab(text: 'Aktif', icon: Icon(Icons.work_outline)),
+          Tab(text: 'Arsip', icon: Icon(Icons.archive_outlined)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
+      child: Container(
+        height: 45,
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: _onSearchChanged,
+          decoration: InputDecoration(
+            hintText: 'Cari lowongan...',
+            hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+            prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: Icon(Icons.clear, color: Colors.grey[500], size: 20),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                      Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab, search: null);
+                    },
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
       ),
     );
   }
@@ -129,25 +222,101 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
 
           if (jobService.error != null && jobService.jobs.isEmpty) {
             return Center(
-              child: Text(jobService.error!, style: TextStyle(color: Colors.grey[600])),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    Text(
+                      jobService.error!,
+                      style: TextStyle(color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Coba Lagi'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A365D),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
-          if (jobService.jobs.isEmpty) {
+          // Filter jobs based on archived status and search query (client-side fallback)
+          final filteredJobs = jobService.jobs.where((job) {
+            final isArchived = job.archivedAt != null && job.archivedAt!.isNotEmpty;
+            final matchesArchived = _isArchivedTab ? isArchived : !isArchived;
+            
+            // If search query exists, filter by search
+            if (_searchQuery.isNotEmpty) {
+              final query = _searchQuery.toLowerCase();
+              final matchesSearch = 
+                  (job.judul.toLowerCase().contains(query)) ||
+                  (job.lokasi?.toLowerCase().contains(query) ?? false) ||
+                  (job.posisi?.toLowerCase().contains(query) ?? false) ||
+                  (job.deskripsi.toLowerCase().contains(query));
+              return matchesArchived && matchesSearch;
+            }
+            
+            return matchesArchived;
+          }).toList();
+
+          if (filteredJobs.isEmpty) {
             return Center(
-              child: Text('Belum ada lowongan', style: TextStyle(color: Colors.grey[600])),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _searchQuery.isNotEmpty 
+                        ? Icons.search_off 
+                        : (_isArchivedTab ? Icons.archive_outlined : Icons.work_outline),
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _searchQuery.isNotEmpty
+                        ? 'Tidak ada lowongan ditemukan untuk "${_searchQuery}"'
+                        : (_isArchivedTab ? 'Belum ada lowongan diarsipkan' : 'Belum ada lowongan'),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_searchQuery.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                        Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab, search: null);
+                      },
+                      icon: const Icon(Icons.clear),
+                      label: const Text('Hapus Pencarian'),
+                    ),
+                  ],
+                ],
+              ),
             );
           }
 
           return RefreshIndicator(
             onRefresh: () async {
-              await Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true);
+              await Provider.of<JobService>(context, listen: false).getMyJobs(refresh: true, archived: _isArchivedTab, search: _searchQuery.isNotEmpty ? _searchQuery : null);
             },
             child: ListView.separated(
-              itemCount: jobService.jobs.length,
+              itemCount: filteredJobs.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final job = jobService.jobs[index];
+                final job = filteredJobs[index];
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -236,19 +405,64 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
                                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dihapus')));
                                     }
                                   }
-                                } else if (value == 'expire') {
-                                  final today = DateTime.now();
-                                  final dateStr = today.toIso8601String().split('T').first;
-                                  final res = await Provider.of<JobService>(context, listen: false).updateJobStatus(job.id, statusAktif: false, tanggalSelesai: dateStr);
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
+                                } else if (value == 'archive') {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Arsipkan Lowongan'),
+                                      content: const Text('Yakin ingin mengarsipkan lowongan ini? Lowongan yang diarsipkan tidak akan muncul di list aktif.'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Arsipkan')),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    final jobService = Provider.of<JobService>(context, listen: false);
+                                    final res = await jobService.archiveJob(job.id);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diarsipkan')));
+                                      // Reload current tab after archive
+                                      await jobService.getMyJobs(refresh: true, archived: _isArchivedTab);
+                                    }
+                                  }
+                                } else if (value == 'unarchive') {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Kembalikan dari Arsip'),
+                                      content: const Text('Yakin ingin mengembalikan lowongan ini dari arsip?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kembalikan')),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    final jobService = Provider.of<JobService>(context, listen: false);
+                                    final res = await jobService.unarchiveJob(job.id);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dikembalikan dari arsip')));
+                                      // Reload current tab after unarchive
+                                      await jobService.getMyJobs(refresh: true, archived: _isArchivedTab);
+                                    }
                                   }
                                 }
                               },
-                              itemBuilder: (_) => [
-                                const PopupMenuItem(value: 'expire', child: Text('Tandai Kadaluarsa')),
-                                const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
-                              ],
+                              itemBuilder: (_) {
+                                final isArchived = job.archivedAt != null && job.archivedAt!.isNotEmpty;
+                                if (isArchived) {
+                                  return [
+                                    const PopupMenuItem(value: 'unarchive', child: Text('Kembalikan dari Arsip')),
+                                    const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
+                                  ];
+                                } else {
+                                  return [
+                                    const PopupMenuItem(value: 'archive', child: Text('Arsipkan Lowongan')),
+                                    const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
+                                  ];
+                                }
+                              },
                               icon: Icon(Icons.more_vert, color: Colors.grey[400]),
                             ),
                           ],
@@ -275,22 +489,56 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: job.statusAktif == true ? null : () async {
-                                  final res = await Provider.of<JobService>(context, listen: false).activateJob(job.id);
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diaktifkan')));
-                                  }
-                                },
-                                icon: const Icon(Icons.check_circle, size: 18),
-                                label: const Text('Aktifkan'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  disabledBackgroundColor: Colors.grey[300],
-                                  disabledForegroundColor: Colors.grey[600],
-                                ),
-                              ),
+                              child: job.statusAktif == true
+                                  ? ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: const Text('Nonaktifkan Lowongan'),
+                                            content: const Text('Yakin ingin menonaktifkan lowongan ini?'),
+                                            actions: [
+                                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                              TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Nonaktifkan')),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirm == true) {
+                                          final today = DateTime.now();
+                                          final dateStr = today.toIso8601String().split('T').first;
+                                          final jobService = Provider.of<JobService>(context, listen: false);
+                                          final res = await jobService.updateJobStatus(job.id, statusAktif: false, tanggalSelesai: dateStr);
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dinonaktifkan')));
+                                            // Refresh current tab after update
+                                            await jobService.getMyJobs(refresh: true, archived: _isArchivedTab);
+                                          }
+                                        }
+                                      },
+                                      icon: const Icon(Icons.cancel, size: 18),
+                                      label: const Text('Nonaktifkan'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    )
+                                  : ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final jobService = Provider.of<JobService>(context, listen: false);
+                                        final res = await jobService.activateJob(job.id);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diaktifkan')));
+                                          // Refresh current tab after update
+                                          await jobService.getMyJobs(refresh: true, archived: _isArchivedTab);
+                                        }
+                                      },
+                                      icon: const Icon(Icons.check_circle, size: 18),
+                                      label: const Text('Aktifkan'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ],
                         ),
@@ -673,12 +921,11 @@ class _ApplicantsScreen extends StatefulWidget {
 class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerProviderStateMixin {
   bool _loading = false;
   String? _error;
-  List<Map<String, dynamic>> _apps = [];
-  List<Map<String, dynamic>> _archivedApps = [];
+  List<Map<String, dynamic>> _allApps = [];
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _isArchivedTab = false;
+  bool _isAcceptedTab = false;
 
   @override
   void initState() {
@@ -686,13 +933,12 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        final newIsArchived = _tabController.index == 1;
-        if (newIsArchived != _isArchivedTab) {
+        final newIsAccepted = _tabController.index == 1;
+        if (newIsAccepted != _isAcceptedTab) {
           setState(() {
-            _isArchivedTab = newIsArchived;
+            _isAcceptedTab = newIsAccepted;
             // Keep search query when switching tabs
           });
-          _load();
         }
       }
     });
@@ -712,18 +958,14 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
       final searchQuery = _searchQuery.isNotEmpty ? _searchQuery : null;
       final res = await ApiService.getApplicantsForJob(
         widget.jobId,
-        archived: _isArchivedTab,
+        archived: false, // Always get non-archived applicants
         search: searchQuery,
       );
       if (res['success'] == true) {
         final List<dynamic> list = res['data'] as List<dynamic>;
         final apps = list.whereType<Map<String, dynamic>>().toList();
         setState(() {
-          if (_isArchivedTab) {
-            _archivedApps = apps;
-          } else {
-            _apps = apps;
-          }
+          _allApps = apps;
         });
       } else {
         _error = res['message'];
@@ -732,6 +974,22 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
       _error = e.toString();
     } finally {
       if (mounted) setState(() { _loading = false; });
+    }
+  }
+  
+  List<Map<String, dynamic>> get _filteredApps {
+    if (_isAcceptedTab) {
+      // Filter untuk tab "Diterima" - hanya pelamar dengan status "diterima"
+      return _allApps.where((app) {
+        final status = (app['status'] ?? '').toString().toLowerCase();
+        return status == 'diterima';
+      }).toList();
+    } else {
+      // Tab "Lamaran" - semua pelamar kecuali yang diterima
+      return _allApps.where((app) {
+        final status = (app['status'] ?? '').toString().toLowerCase();
+        return status != 'diterima';
+      }).toList();
     }
   }
 
@@ -749,7 +1007,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
 
   @override
   Widget build(BuildContext context) {
-    final currentApps = _isArchivedTab ? _archivedApps : _apps;
+    final currentApps = _filteredApps;
     
     return Scaffold(
       appBar: AppBar(
@@ -763,8 +1021,14 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
           unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF1A365D),
           tabs: const [
-            Tab(text: 'Lamaran', icon: Icon(Icons.inbox)),
-            Tab(text: 'Arsip', icon: Icon(Icons.archive)),
+            Tab(
+              text: 'Lamaran',
+              icon: Icon(Icons.inbox_outlined),
+            ),
+            Tab(
+              text: 'Diterima',
+              icon: Icon(Icons.check_circle_outline),
+            ),
           ],
         ),
       ),
@@ -824,13 +1088,13 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
                                 child: Column(
                                   children: [
                                     Icon(
-                                      _isArchivedTab ? Icons.archive_outlined : Icons.inbox_outlined,
+                                      _isAcceptedTab ? Icons.check_circle_outline : Icons.inbox_outlined,
                                       size: 64,
                                       color: Colors.grey[400],
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      _isArchivedTab ? 'Belum ada lamaran diarsipkan' : 'Belum ada pelamar',
+                                      _isAcceptedTab ? 'Belum ada pelamar yang diterima' : 'Belum ada pelamar',
                                       style: TextStyle(color: Colors.grey[600], fontSize: 16),
                                     ),
                                   ],
@@ -856,7 +1120,6 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     final email = pelamar?['email'] ?? '-';
     final cvUrl = pelamar?['cv_url'] as String?;
     final status = (app['status'] ?? '').toString();
-    final isArchived = app['archived_at'] != null;
     Color color;
     switch (status) {
       case 'lolos':
@@ -889,9 +1152,9 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                child: Icon(
-                  isArchived ? Icons.archive : Icons.person,
-                  color: const Color(0xFF1A365D),
+                child: const Icon(
+                  Icons.person,
+                  color: Color(0xFF1A365D),
                 ),
               ),
               const SizedBox(width: 12),
@@ -904,19 +1167,6 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
                         Expanded(
                           child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
                         ),
-                        if (isArchived)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Arsip',
-                              style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
-                            ),
-                          ),
                       ],
                     ),
                     Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
@@ -931,87 +1181,49 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          // Action buttons row
+          Row(
             children: [
-              TextButton.icon(
-                onPressed: () {
-                  PageTransitions.slideTo(
-                    context,
-                    _ApplicantDetailPage(
-                      application: app,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.person_search),
-                label: const Text('Lihat Pelamar'),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    PageTransitions.slideTo(
+                      context,
+                      _ApplicantDetailPage(
+                        application: app,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.person_search, size: 18),
+                  label: const Text('Lihat Pelamar', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1A365D),
+                    side: const BorderSide(color: Color(0xFF1A365D)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
               ),
-              if (cvUrl != null)
-                TextButton.icon(onPressed: () => _openPdf(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
-              _statusMenu(app['id'].toString(), status),
-              // Archive/Unarchive button
-              TextButton.icon(
-                onPressed: () async {
-                  if (isArchived) {
-                    final res = await ApiService.unarchiveApplication(app['id'].toString());
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dikembalikan dari arsip')));
-                      if (res['success'] == true) {
-                        // Reload both tabs to keep them in sync
-                        await _load();
-                        // Also reload the other tab
-                        final otherTabArchived = !_isArchivedTab;
-                        final otherRes = await ApiService.getApplicantsForJob(
-                          widget.jobId,
-                          archived: otherTabArchived,
-                          search: _searchQuery.isNotEmpty ? _searchQuery : null,
-                        );
-                        if (otherRes['success'] == true && mounted) {
-                          final List<dynamic> otherList = otherRes['data'] as List<dynamic>;
-                          final otherApps = otherList.whereType<Map<String, dynamic>>().toList();
-                          setState(() {
-                            if (otherTabArchived) {
-                              _archivedApps = otherApps;
-                            } else {
-                              _apps = otherApps;
-                            }
-                          });
-                        }
-                      }
-                    }
-                  } else {
-                    final res = await ApiService.archiveApplication(app['id'].toString());
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diarsipkan')));
-                      if (res['success'] == true) {
-                        // Reload both tabs to keep them in sync
-                        await _load();
-                        // Also reload the other tab
-                        final otherTabArchived = !_isArchivedTab;
-                        final otherRes = await ApiService.getApplicantsForJob(
-                          widget.jobId,
-                          archived: otherTabArchived,
-                          search: _searchQuery.isNotEmpty ? _searchQuery : null,
-                        );
-                        if (otherRes['success'] == true && mounted) {
-                          final List<dynamic> otherList = otherRes['data'] as List<dynamic>;
-                          final otherApps = otherList.whereType<Map<String, dynamic>>().toList();
-                          setState(() {
-                            if (otherTabArchived) {
-                              _archivedApps = otherApps;
-                            } else {
-                              _apps = otherApps;
-                            }
-                          });
-                        }
-                      }
-                    }
-                  }
-                },
-                icon: Icon(isArchived ? Icons.unarchive : Icons.archive, size: 18),
-                label: Text(isArchived ? 'Kembalikan' : 'Arsipkan'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: cvUrl != null ? () => _openPdf(cvUrl) : null,
+                  icon: const Icon(Icons.picture_as_pdf, size: 18),
+                  label: const Text('Lihat CV', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1A365D),
+                    side: const BorderSide(color: Color(0xFF1A365D)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Status button row
+          Row(
+            children: [
+              Expanded(
+                child: _statusMenu(app['id'].toString(), status),
               ),
             ],
           ),
@@ -1045,7 +1257,9 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiRes['message'] ?? 'Diperbarui')));
-        if (apiRes['success'] == true) _load();
+        if (apiRes['success'] == true) {
+          _load();
+        }
       },
       itemBuilder: (_) => const [
         PopupMenuItem(value: 'melamar', child: Text('Melamar')),
@@ -1054,10 +1268,18 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
         PopupMenuItem(value: 'diterima', child: Text('Diterima')),
         PopupMenuItem(value: 'ditolak', child: Text('Ditolak')),
       ],
-      child: OutlinedButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.sync_alt, size: 18),
-        label: const Text('Ubah Status'),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: null,
+          icon: const Icon(Icons.sync_alt, size: 18),
+          label: const Text('Ubah Status', style: TextStyle(fontSize: 12)),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF1A365D),
+            side: const BorderSide(color: Color(0xFF1A365D)),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+          ),
+        ),
       ),
     );
   }
