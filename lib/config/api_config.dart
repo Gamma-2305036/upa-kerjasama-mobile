@@ -23,10 +23,10 @@ class ApiConfig {
         // 🎯 UNTUK HP FISIK - gunakan IP laptop Anda
         // Ubah IP ini sesuai IP laptop di network hotspot
         // Cek IP dengan: ipconfig (Windows) atau ifconfig (Linux/Mac)
-        return 'http://10.144.129.8:8000/api';
+        // return 'http://10.144.129.8:8000/api';
         
         // UNTUK EMULATOR - uncomment line dibawah ini dan comment line diatas
-        // return 'http://10.0.2.2:8000/api';
+        return 'http://10.0.2.2:8000/api';
       case TargetPlatform.iOS:
         return 'http://localhost:8000/api';
       case TargetPlatform.macOS:

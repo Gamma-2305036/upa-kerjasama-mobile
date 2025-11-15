@@ -395,6 +395,43 @@ class ApiService {
     }
   }
 
+  // Update job (edit)
+  static Future<Map<String, dynamic>> updateJob(String jobId, Map<String, dynamic> payload) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      )
+          .timeout(const Duration(seconds: 20));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal memperbarui lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Activate job
+  static Future<Map<String, dynamic>> activateJob(String jobId) async {
+    try {
+      final response = await http
+          .put(
+        Uri.parse('$baseUrl/mitra/jobs/$jobId/activate'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success']) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengaktifkan lowongan'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
   // Update job status/expiry
   static Future<Map<String, dynamic>> updateJobStatus(String jobId, {bool? statusAktif, String? tanggalSelesai}) async {
     try {
@@ -418,11 +455,26 @@ class ApiService {
   }
 
   // Mitra: get applicants for a specific job
-  static Future<Map<String, dynamic>> getApplicantsForJob(String jobId) async {
+  static Future<Map<String, dynamic>> getApplicantsForJob(String jobId, {bool archived = false, String? search}) async {
     try {
+      String url = '$baseUrl/mitra/jobs/$jobId/applicants';
+      List<String> params = [];
+      
+      if (archived) {
+        params.add('archived=true');
+      }
+      
+      if (search != null && search.isNotEmpty) {
+        params.add('search=${Uri.encodeComponent(search)}');
+      }
+      
+      if (params.isNotEmpty) {
+        url += '?${params.join('&')}';
+      }
+      
       final response = await http
           .get(
-        Uri.parse('$baseUrl/mitra/jobs/$jobId/applicants'),
+        Uri.parse(url),
         headers: _getHeaders(),
       )
           .timeout(const Duration(seconds: 20));
@@ -430,6 +482,42 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['success'] == true) return data;
       return {'success': false, 'message': data['message'] ?? 'Gagal mengambil pelamar'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Mitra: archive an application
+  static Future<Map<String, dynamic>> archiveApplication(String applicationId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/mitra/applications/$applicationId/archive'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengarsipkan lamaran'};
+    } catch (e) {
+      return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
+    }
+  }
+
+  // Mitra: unarchive an application
+  static Future<Map<String, dynamic>> unarchiveApplication(String applicationId) async {
+    try {
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/mitra/applications/$applicationId/unarchive'),
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 15));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) return data;
+      return {'success': false, 'message': data['message'] ?? 'Gagal mengembalikan lamaran dari arsip'};
     } catch (e) {
       return {'success': false, 'message': 'Terjadi kesalahan: ${e.toString()}'};
     }

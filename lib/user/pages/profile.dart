@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../../login_page.dart';
 import '../../services/auth_service.dart';
 import '../components/edit_profil_page.dart';
@@ -167,9 +168,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Edit Profil',
               subtitle: 'Ubah informasi pribadi',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const EditProfilPage()),
+                  const EditProfilPage(),
                 );
               },
             ),
@@ -179,9 +180,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Lamaran Saya',
               subtitle: 'Lihat status lamaran',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const LamaranSayaPage()),
+                  const LamaranSayaPage(),
                 );
               },
             ),
@@ -191,9 +192,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Lowongan Tersimpan',
               subtitle: 'Lowongan yang disimpan',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const LowonganTersimpanPage()),
+                  const LowonganTersimpanPage(),
                 );
               },
             ),
@@ -203,9 +204,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Notifikasi',
               subtitle: 'Pengaturan notifikasi',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotifikasiPage()),
+                  const NotifikasiPage(),
                 );
               },
             ),
@@ -215,9 +216,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Bantuan',
               subtitle: 'FAQ dan dukungan',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const BantuanPage()),
+                  const BantuanPage(),
                 );
               },
             ),
@@ -227,9 +228,9 @@ class ProfilePage extends StatelessWidget {
               title: 'Tentang Aplikasi',
               subtitle: 'Versi 1.0.0',
               onTap: () {
-                Navigator.push(
+                PageTransitions.slideTo(
                   context,
-                  MaterialPageRoute(builder: (context) => const TentangAplikasiPage()),
+                  const TentangAplikasiPage(),
                 );
               },
             ),
@@ -430,9 +431,9 @@ class ProfilePage extends StatelessWidget {
                   
                   // Force navigation to login page
                   if (outerContext.mounted) {
-                    Navigator.pushAndRemoveUntil(
+                    PageTransitions.fadeAndRemoveUntil(
                       outerContext,
-                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      const LoginPage(),
                       (route) => false,
                     );
                   }
@@ -451,9 +452,9 @@ class ProfilePage extends StatelessWidget {
                       ),
                     );
                     
-                    Navigator.pushAndRemoveUntil(
+                    PageTransitions.fadeAndRemoveUntil(
                       outerContext,
-                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      const LoginPage(),
                       (route) => false,
                     );
                   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../components/main_navigation.dart';
 import '../../services/auth_service.dart';
 
@@ -28,9 +29,9 @@ class _MitraLoginPageState extends State<MitraLoginPage> {
     if (!mounted) return;
 
     if (success && authService.hasRole('mitra')) {
-      Navigator.pushReplacement(
+      PageTransitions.fadeReplace(
         context,
-        MaterialPageRoute(builder: (context) => const MitraMainNavigation()),
+        const MitraMainNavigation(),
       );
     } else if (success) {
       ScaffoldMessenger.of(context).showSnackBar(

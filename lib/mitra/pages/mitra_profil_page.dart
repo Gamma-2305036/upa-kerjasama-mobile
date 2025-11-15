@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../../services/auth_service.dart';
 import '../../user/components/detail_perusahaan_page.dart';
 import '../../services/api_service.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
 
 class MitraProfilPage extends StatelessWidget {
   const MitraProfilPage({super.key});
@@ -102,16 +101,16 @@ class MitraProfilPage extends StatelessWidget {
       child: Column(
         children: [
           _buildTile(icon: Icons.info_outline, title: 'Informasi Perusahaan', subtitle: 'Profil dan legalitas', onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const _InformasiPerusahaanPage()));
+            PageTransitions.slideTo(context, const _InformasiPerusahaanPage());
           }),
           _buildTile(icon: Icons.edit_outlined, title: 'Edit Profil Perusahaan', subtitle: 'Ubah data perusahaan', onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const _EditProfilPerusahaanPage()));
+            PageTransitions.slideTo(context, const _EditProfilPerusahaanPage());
           }),
           _buildTile(icon: Icons.people_outline, title: 'Pengelola Akun', subtitle: 'Tim HR dan akses', onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const _PengelolaAkunPage()));
+            PageTransitions.slideTo(context, const _PengelolaAkunPage());
           }),
           _buildTile(icon: Icons.lock_outline, title: 'Keamanan', subtitle: 'Ubah kata sandi', onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const _KeamananPage()));
+            PageTransitions.slideTo(context, const _KeamananPage());
           }),
           const SizedBox(height: 12),
           Container(

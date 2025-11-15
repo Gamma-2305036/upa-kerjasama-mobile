@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/page_transitions.dart';
 import '../../services/api_service.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -269,12 +270,11 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
       fullUrl = fileUrl;
     }
     
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PdfViewerPage(
-          url: fullUrl,
-          title: _dokumenTypes[jenisDokumen] ?? 'Dokumen PDF',
-        ),
+    PageTransitions.slideTo(
+      context,
+      PdfViewerPage(
+        url: fullUrl,
+        title: _dokumenTypes[jenisDokumen] ?? 'Dokumen PDF',
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../../services/auth_service.dart';
 import 'edit_profil_detail_page.dart';
 import 'edit_academic_info_page.dart';
@@ -152,9 +153,9 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Detail Profil
               InkWell(
                 onTap: () {
-                  Navigator.push(
+                  PageTransitions.slideTo(
                     context,
-                    MaterialPageRoute(builder: (context) => const EditProfilDetailPage()),
+                    const EditProfilDetailPage(),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),
@@ -234,9 +235,9 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Informasi Akademik
               InkWell(
                 onTap: () {
-                  Navigator.push(
+                  PageTransitions.slideTo(
                     context,
-                    MaterialPageRoute(builder: (context) => const EditAcademicInfoPage()),
+                    const EditAcademicInfoPage(),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),
@@ -316,9 +317,9 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Data Keluarga
               InkWell(
                 onTap: () {
-                  Navigator.push(
+                  PageTransitions.slideTo(
                     context,
-                    MaterialPageRoute(builder: (context) => const EditKeluargaPage()),
+                    const EditKeluargaPage(),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),
@@ -398,9 +399,9 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Dokumen Pendukung
               InkWell(
                 onTap: () {
-                  Navigator.push(
+                  PageTransitions.slideTo(
                     context,
-                    MaterialPageRoute(builder: (context) => const EditDokumenPage()),
+                    const EditDokumenPage(),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),

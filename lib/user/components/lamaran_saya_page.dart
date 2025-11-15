@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/job_model.dart';
+import '../../utils/page_transitions.dart';
+import 'detail_lamaran_page.dart';
 
 class LamaranSayaPage extends StatefulWidget {
   const LamaranSayaPage({super.key});
@@ -281,35 +283,13 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
             const SizedBox(height: 15),
             
             // Detail lamaran
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 5),
-                Text(
-                  'Dikirim: 15 Des 2024',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 5),
-                Text(
-                  '2 hari yang lalu',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
+            _buildApplicationTimeline(application),
             
             const SizedBox(height: 15),
             
             // Aksi berdasarkan status
             if (status == 'melamar' || status == 'pending')
-              _buildPendingActions()
+              _buildPendingActions(application)
             else if (status == 'diterima')
               _buildAcceptedActions(application)
             else if (status == 'ditolak')
@@ -320,7 +300,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  Widget _buildPendingActions() {
+  Widget _buildPendingActions(Map<String, dynamic> application) {
     return Row(
       children: [
         Expanded(
@@ -365,7 +345,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () {
-                  _viewApplicationDetails();
+                  _viewApplicationDetails(application);
                 },
                 child: Center(
                   child: Text(
@@ -442,7 +422,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () {
-                  _viewApplicationDetails();
+                  _viewApplicationDetails(application);
                 },
                 child: Center(
                   child: Text(
@@ -512,7 +492,7 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
               child: InkWell(
                 borderRadius: BorderRadius.circular(10),
                 onTap: () {
-                  _viewApplicationDetails();
+                  _viewApplicationDetails(application);
                 },
                 child: Center(
                   child: Text(
@@ -619,9 +599,81 @@ class _LamaranSayaPageState extends State<LamaranSayaPage> with SingleTickerProv
     );
   }
 
-  void _viewApplicationDetails() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Membuka detail lamaran...')),
+  void _viewApplicationDetails(Map<String, dynamic> application) {
+    PageTransitions.slideTo(
+      context,
+      DetailLamaranPage(application: application),
+    );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return '-';
+    try {
+      final date = DateTime.parse(dateString);
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      return '${date.day} ${months[date.month - 1]} ${date.year}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  String _formatRelativeTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return '-';
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays == 0) {
+        if (difference.inHours == 0) {
+          if (difference.inMinutes == 0) {
+            return 'Baru saja';
+          }
+          return '${difference.inMinutes} menit yang lalu';
+        }
+        return '${difference.inHours} jam yang lalu';
+      } else if (difference.inDays == 1) {
+        return 'Kemarin';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} hari yang lalu';
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return '$weeks minggu yang lalu';
+      } else if (difference.inDays < 365) {
+        final months = (difference.inDays / 30).floor();
+        return '$months bulan yang lalu';
+      } else {
+        final years = (difference.inDays / 365).floor();
+        return '$years tahun yang lalu';
+      }
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  Widget _buildApplicationTimeline(Map<String, dynamic> application) {
+    return Row(
+      children: [
+        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 5),
+        Text(
+          'Dikirim: ${_formatDate(application['created_at']?.toString())}',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(width: 20),
+        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 5),
+        Text(
+          _formatRelativeTime(application['created_at']?.toString()),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -5,8 +5,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import '../../user/components/pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../../services/job_service.dart';
 import '../../services/api_service.dart';
+import '../../models/job_model.dart';
 
 class MitraLowonganPage extends StatefulWidget {
   const MitraLowonganPage({super.key});
@@ -37,9 +39,9 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF1A365D),
         onPressed: () {
-          Navigator.push(
+          PageTransitions.slideTo(
             context,
-            MaterialPageRoute(builder: (_) => const _BuatLowonganPage()),
+            const _BuatLowonganPage(),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
@@ -89,6 +91,33 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
     );
   }
 
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inDays == 0) {
+        return 'Hari ini';
+      } else if (difference.inDays == 1) {
+        return 'Kemarin';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} hari lalu';
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return '$weeks minggu lalu';
+      } else if (difference.inDays < 365) {
+        final months = (difference.inDays / 30).floor();
+        return '$months bulan lalu';
+      } else {
+        final years = (difference.inDays / 365).floor();
+        return '$years tahun lalu';
+      }
+    } catch (e) {
+      return dateString;
+    }
+  }
+
   Widget _buildContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -129,73 +158,141 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap: () {
-                      Navigator.push(
+                      PageTransitions.slideTo(
                         context,
-                        MaterialPageRoute(builder: (_) => _DetailLowonganPage(jobId: job.id)),
+                        _DetailLowonganPage(jobId: job.id),
                       );
                     },
-                    child: Row(
+                    child: Column(
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A365D).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.work_outline, color: Color(0xFF1A365D)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                job.judul,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D)),
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A365D).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                job.lokasi ?? '-',
-                                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          onSelected: (value) async {
-                            if (value == 'delete') {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text('Hapus Lowongan'),
-                                  content: const Text('Yakin ingin menghapus lowongan ini?'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus')),
+                              child: const Icon(Icons.work_outline, color: Color(0xFF1A365D)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          job.judul,
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1A365D)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // Status indicator
+                                      Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: (job.statusAktif == true) ? Colors.green : Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    job.lokasi ?? '-',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                  ),
+                                  if (job.createdAt != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Dibuat: ${_formatDate(job.createdAt!)}',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                    ),
                                   ],
-                                ),
-                              );
-                              if (confirm == true) {
-                                final res = await Provider.of<JobService>(context, listen: false).deleteJob(job.id);
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dihapus')));
+                                ],
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: (value) async {
+                                if (value == 'delete') {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Hapus Lowongan'),
+                                      content: const Text('Yakin ingin menghapus lowongan ini?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus')),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirm == true) {
+                                    final res = await Provider.of<JobService>(context, listen: false).deleteJob(job.id);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dihapus')));
+                                    }
+                                  }
+                                } else if (value == 'expire') {
+                                  final today = DateTime.now();
+                                  final dateStr = today.toIso8601String().split('T').first;
+                                  final res = await Provider.of<JobService>(context, listen: false).updateJobStatus(job.id, statusAktif: false, tanggalSelesai: dateStr);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
+                                  }
                                 }
-                              }
-                            } else if (value == 'expire') {
-                              final today = DateTime.now();
-                              final dateStr = today.toIso8601String().split('T').first;
-                              final res = await Provider.of<JobService>(context, listen: false).updateJobStatus(job.id, statusAktif: false, tanggalSelesai: dateStr);
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
-                              }
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            const PopupMenuItem(value: 'expire', child: Text('Tandai Kadaluarsa')),
-                            const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(value: 'expire', child: Text('Tandai Kadaluarsa')),
+                                const PopupMenuItem(value: 'delete', child: Text('Hapus Lowongan')),
+                              ],
+                              icon: Icon(Icons.more_vert, color: Colors.grey[400]),
+                            ),
                           ],
-                          icon: Icon(Icons.more_vert, color: Colors.grey[400]),
+                        ),
+                        const SizedBox(height: 12),
+                        // Action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  PageTransitions.slideTo(
+                                    context,
+                                    _EditLowonganPage(job: job),
+                                  );
+                                },
+                                icon: const Icon(Icons.edit, size: 18),
+                                label: const Text('Edit'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF1A365D),
+                                  side: const BorderSide(color: Color(0xFF1A365D)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: job.statusAktif == true ? null : () async {
+                                  final res = await Provider.of<JobService>(context, listen: false).activateJob(job.id);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diaktifkan')));
+                                  }
+                                },
+                                icon: const Icon(Icons.check_circle, size: 18),
+                                label: const Text('Aktifkan'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: Colors.grey[300],
+                                  disabledForegroundColor: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -363,6 +460,198 @@ class _BuatLowonganPageState extends State<_BuatLowonganPage> {
   }
 }
 
+class _EditLowonganPage extends StatefulWidget {
+  final Job job;
+  const _EditLowonganPage({super.key, required this.job});
+
+  @override
+  State<_EditLowonganPage> createState() => _EditLowonganPageState();
+}
+
+class _EditLowonganPageState extends State<_EditLowonganPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _judul;
+  late final TextEditingController _posisi;
+  late final TextEditingController _lokasi;
+  late final TextEditingController _gajiMin;
+  late final TextEditingController _gajiMax;
+  late final TextEditingController _deskripsi;
+  late final TextEditingController _jenis;
+  late final TextEditingController _pendidikan;
+  late final TextEditingController _persyaratan;
+  DateTime? _tanggalSelesai;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _judul = TextEditingController(text: widget.job.judul);
+    _posisi = TextEditingController(text: widget.job.posisi ?? '');
+    _lokasi = TextEditingController(text: widget.job.lokasi ?? '');
+    _gajiMin = TextEditingController(text: widget.job.gajiMin ?? '');
+    _gajiMax = TextEditingController(text: widget.job.gajiMax ?? '');
+    _deskripsi = TextEditingController(text: widget.job.deskripsi);
+    _jenis = TextEditingController(text: widget.job.jenisPekerjaan ?? '');
+    _pendidikan = TextEditingController(text: widget.job.jenjangPendidikan ?? '');
+    _persyaratan = TextEditingController(text: widget.job.rincianLowongan ?? '');
+    if (widget.job.tanggalSelesai != null) {
+      try {
+        _tanggalSelesai = DateTime.parse(widget.job.tanggalSelesai!);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _judul.dispose();
+    _posisi.dispose();
+    _lokasi.dispose();
+    _gajiMin.dispose();
+    _gajiMax.dispose();
+    _deskripsi.dispose();
+    _jenis.dispose();
+    _pendidikan.dispose();
+    _persyaratan.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A365D),
+        elevation: 0.5,
+        title: const Text('Edit Lowongan', style: TextStyle(color: Color(0xFF1A365D))),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                _input(controller: _judul, label: 'Judul Lowongan', validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+                const SizedBox(height: 12),
+                _input(controller: _posisi, label: 'Posisi'),
+                const SizedBox(height: 12),
+                _input(controller: _lokasi, label: 'Lokasi'),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: _input(controller: _gajiMin, label: 'Gaji Min', keyboardType: TextInputType.number)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _input(controller: _gajiMax, label: 'Gaji Max', keyboardType: TextInputType.number)),
+                ]),
+                const SizedBox(height: 12),
+                _input(controller: _deskripsi, label: 'Deskripsi', maxLines: 5, validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null),
+                const SizedBox(height: 12),
+                _input(controller: _jenis, label: 'Jenis Pekerjaan (Full Time/Part Time/Kontrak)'),
+                const SizedBox(height: 12),
+                _input(controller: _pendidikan, label: 'Jenjang Pendidikan (SMA/D3/S1)'),
+                const SizedBox(height: 12),
+                _input(controller: _persyaratan, label: 'Persyaratan (pisahkan dengan ";")', maxLines: 3),
+                const SizedBox(height: 12),
+                _datePicker(context),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Builder(
+          builder: (ctx) {
+            final double kb = MediaQuery.of(ctx).viewInsets.bottom;
+            return AnimatedPadding(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + kb),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A365D), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  onPressed: _loading ? null : () async {
+                    if (!_formKey.currentState!.validate()) return;
+                    setState(() => _loading = true);
+                    final payload = {
+                      'judul': _judul.text.trim(),
+                      'posisi': _posisi.text.trim(),
+                      'lokasi': _lokasi.text.trim(),
+                      'gaji_min': int.tryParse(_gajiMin.text.trim()),
+                      'gaji_max': int.tryParse(_gajiMax.text.trim()),
+                      'deskripsi': _deskripsi.text.trim(),
+                      'jenis_pekerjaan': _jenis.text.trim().isEmpty ? null : _jenis.text.trim(),
+                      'jenjang_pendidikan': _pendidikan.text.trim().isEmpty ? null : _pendidikan.text.trim(),
+                      'rincian_lowongan': _persyaratan.text.trim().isEmpty ? null : _persyaratan.text.trim(),
+                      'tanggal_selesai': _tanggalSelesai != null ? _tanggalSelesai!.toIso8601String().split('T').first : null,
+                    };
+                    final res = await Provider.of<JobService>(context, listen: false).updateJob(widget.job.id, payload);
+                    setState(() => _loading = false);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
+                    if (res['success'] == true) Navigator.pop(context);
+                  },
+                  child: _loading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _input({required TextEditingController controller, required String label, int maxLines = 1, TextInputType? keyboardType, String? Function(String?)? validator}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: label,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _datePicker(BuildContext context) {
+    final label = _tanggalSelesai == null ? 'Tanggal Selesai (kadaluarsa)' : _tanggalSelesai!.toIso8601String().split('T').first;
+    return InkWell(
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(context: context, initialDate: _tanggalSelesai ?? now, firstDate: now, lastDate: DateTime(now.year + 3));
+        if (picked != null) setState(() => _tanggalSelesai = picked);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE2E8F0))),
+        child: Row(
+          children: [
+            const Icon(Icons.event, color: Color(0xFF1A365D)),
+            const SizedBox(width: 10),
+            Text(label),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DetailLowonganPage extends StatelessWidget {
   final String jobId;
   const _DetailLowonganPage({super.key, required this.jobId});
@@ -381,24 +670,61 @@ class _ApplicantsScreen extends StatefulWidget {
   State<_ApplicantsScreen> createState() => _ApplicantsScreenState();
 }
 
-class _ApplicantsScreenState extends State<_ApplicantsScreen> {
+class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerProviderStateMixin {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _apps = [];
+  List<Map<String, dynamic>> _archivedApps = [];
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  bool _isArchivedTab = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final newIsArchived = _tabController.index == 1;
+        if (newIsArchived != _isArchivedTab) {
+          setState(() {
+            _isArchivedTab = newIsArchived;
+            // Keep search query when switching tabs
+          });
+          _load();
+        }
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final res = await ApiService.getApplicantsForJob(widget.jobId);
+      final searchQuery = _searchQuery.isNotEmpty ? _searchQuery : null;
+      final res = await ApiService.getApplicantsForJob(
+        widget.jobId,
+        archived: _isArchivedTab,
+        search: searchQuery,
+      );
       if (res['success'] == true) {
         final List<dynamic> list = res['data'] as List<dynamic>;
-        _apps = list.whereType<Map<String, dynamic>>().toList();
+        final apps = list.whereType<Map<String, dynamic>>().toList();
+        setState(() {
+          if (_isArchivedTab) {
+            _archivedApps = apps;
+          } else {
+            _apps = apps;
+          }
+        });
       } else {
         _error = res['message'];
       }
@@ -409,37 +735,117 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
     }
   }
 
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+    // Debounce search
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == value) {
+        _load();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentApps = _isArchivedTab ? _archivedApps : _apps;
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1A365D),
         elevation: 0.5,
         title: const Text('Detail Lowongan', style: TextStyle(color: Color(0xFF1A365D))),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF1A365D),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF1A365D),
+          tabs: const [
+            Tab(text: 'Lamaran', icon: Icon(Icons.inbox)),
+            Tab(text: 'Arsip', icon: Icon(Icons.archive)),
+          ],
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
-            : _error != null
-                ? ListView(children: [
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(_error!, style: TextStyle(color: Colors.grey[600])),
-                    )
-                  ])
-                : _apps.isEmpty
-                    ? ListView(children: const [
-                        SizedBox(height: 80),
-                        Center(child: Text('Belum ada pelamar')),
-                      ])
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: _apps.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, i) => _applicantCard(_apps[i]),
-                      ),
+      body: Column(
+        children: [
+          // Search bar
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: Container(
+              height: 45,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Cari pelamar...',
+                  hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: Colors.grey[500], size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: Colors.grey[500], size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            _load();
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A365D)))
+                  : _error != null
+                      ? ListView(children: [
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(_error!, style: TextStyle(color: Colors.grey[600])),
+                          )
+                        ])
+                      : currentApps.isEmpty
+                          ? ListView(children: [
+                              const SizedBox(height: 80),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      _isArchivedTab ? Icons.archive_outlined : Icons.inbox_outlined,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      _isArchivedTab ? 'Belum ada lamaran diarsipkan' : 'Belum ada pelamar',
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ])
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(20),
+                              itemCount: currentApps.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 12),
+                              itemBuilder: (context, i) => _applicantCard(currentApps[i]),
+                            ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -450,6 +856,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
     final email = pelamar?['email'] ?? '-';
     final cvUrl = pelamar?['cv_url'] as String?;
     final status = (app['status'] ?? '').toString();
+    final isArchived = app['archived_at'] != null;
     Color color;
     switch (status) {
       case 'lolos':
@@ -482,14 +889,36 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.person, color: Color(0xFF1A365D)),
+                child: Icon(
+                  isArchived ? Icons.archive : Icons.person,
+                  color: const Color(0xFF1A365D),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(name, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A365D))),
+                        ),
+                        if (isArchived)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Arsip',
+                              style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                      ],
+                    ),
                     Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   ],
                 ),
@@ -509,12 +938,10 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
             children: [
               TextButton.icon(
                 onPressed: () {
-                  Navigator.push(
+                  PageTransitions.slideTo(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => _ApplicantDetailPage(
-                        application: app,
-                      ),
+                    _ApplicantDetailPage(
+                      application: app,
                     ),
                   );
                 },
@@ -524,6 +951,68 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
               if (cvUrl != null)
                 TextButton.icon(onPressed: () => _openPdf(cvUrl), icon: const Icon(Icons.picture_as_pdf), label: const Text('Lihat CV')),
               _statusMenu(app['id'].toString(), status),
+              // Archive/Unarchive button
+              TextButton.icon(
+                onPressed: () async {
+                  if (isArchived) {
+                    final res = await ApiService.unarchiveApplication(app['id'].toString());
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Dikembalikan dari arsip')));
+                      if (res['success'] == true) {
+                        // Reload both tabs to keep them in sync
+                        await _load();
+                        // Also reload the other tab
+                        final otherTabArchived = !_isArchivedTab;
+                        final otherRes = await ApiService.getApplicantsForJob(
+                          widget.jobId,
+                          archived: otherTabArchived,
+                          search: _searchQuery.isNotEmpty ? _searchQuery : null,
+                        );
+                        if (otherRes['success'] == true && mounted) {
+                          final List<dynamic> otherList = otherRes['data'] as List<dynamic>;
+                          final otherApps = otherList.whereType<Map<String, dynamic>>().toList();
+                          setState(() {
+                            if (otherTabArchived) {
+                              _archivedApps = otherApps;
+                            } else {
+                              _apps = otherApps;
+                            }
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    final res = await ApiService.archiveApplication(app['id'].toString());
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diarsipkan')));
+                      if (res['success'] == true) {
+                        // Reload both tabs to keep them in sync
+                        await _load();
+                        // Also reload the other tab
+                        final otherTabArchived = !_isArchivedTab;
+                        final otherRes = await ApiService.getApplicantsForJob(
+                          widget.jobId,
+                          archived: otherTabArchived,
+                          search: _searchQuery.isNotEmpty ? _searchQuery : null,
+                        );
+                        if (otherRes['success'] == true && mounted) {
+                          final List<dynamic> otherList = otherRes['data'] as List<dynamic>;
+                          final otherApps = otherList.whereType<Map<String, dynamic>>().toList();
+                          setState(() {
+                            if (otherTabArchived) {
+                              _archivedApps = otherApps;
+                            } else {
+                              _apps = otherApps;
+                            }
+                          });
+                        }
+                      }
+                    }
+                  }
+                },
+                icon: Icon(isArchived ? Icons.unarchive : Icons.archive, size: 18),
+                label: Text(isArchived ? 'Kembalikan' : 'Arsipkan'),
+              ),
             ],
           ),
         ],
@@ -690,11 +1179,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> {
       print('🔧 Fixed relative URL to: $fullUrl');
     }
     
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PdfViewerPage(url: fullUrl, title: 'CV Pelamar'),
-      ),
-    );
+    PageTransitions.slideTo(context, PdfViewerPage(url: fullUrl, title: 'CV Pelamar'));
   }
 }
 
@@ -1148,7 +1633,7 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
       print('🔧 Fixed relative URL to: $fullUrl');
     }
     
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => PdfViewerPage(url: fullUrl, title: title)));
+    PageTransitions.slideTo(context, PdfViewerPage(url: fullUrl, title: title));
   }
 }
 

@@ -4,6 +4,7 @@ class Job {
   final String id;
   final String mitraId;
   final String judul;
+  final String? posisi;
   final String deskripsi;
   final String lokasi;
   final String? gajiMin;
@@ -14,6 +15,7 @@ class Job {
   final String? skillRequired;
   final String? rincianLowongan;
   final String? tanggalPenerimaanLamaran;
+  final String? tanggalSelesai;
   final bool? statusAktif;
   final String? createdAt;
   final String? updatedAt;
@@ -23,6 +25,7 @@ class Job {
     required this.id,
     required this.mitraId,
     required this.judul,
+    this.posisi,
     required this.deskripsi,
     required this.lokasi,
     this.gajiMin,
@@ -33,6 +36,7 @@ class Job {
     this.skillRequired,
     this.rincianLowongan,
     this.tanggalPenerimaanLamaran,
+    this.tanggalSelesai,
     this.statusAktif,
     this.createdAt,
     this.updatedAt,
@@ -45,6 +49,7 @@ class Job {
       mitraId: json['mitra_id']?.toString() ??
           (json['mitraPerusahaanId']?.toString() ?? ''),
       judul: json['judul'] ?? '',
+      posisi: json['posisi'],
       deskripsi: json['deskripsi'] ?? '',
       lokasi: json['lokasi'] ?? '',
       gajiMin: json['gaji_min'],
@@ -55,6 +60,7 @@ class Job {
       skillRequired: json['skill_required'],
       rincianLowongan: json['rincian_lowongan'],
       tanggalPenerimaanLamaran: json['tanggal_penerimaan_lamaran'],
+      tanggalSelesai: json['tanggal_selesai'],
       statusAktif: json['status_aktif'],
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
@@ -69,6 +75,7 @@ class Job {
       'id': id,
       'mitra_id': mitraId,
       'judul': judul,
+      'posisi': posisi,
       'deskripsi': deskripsi,
       'lokasi': lokasi,
       'gaji_min': gajiMin,
@@ -79,6 +86,7 @@ class Job {
       'skill_required': skillRequired,
       'rincian_lowongan': rincianLowongan,
       'tanggal_penerimaan_lamaran': tanggalPenerimaanLamaran,
+      'tanggal_selesai': tanggalSelesai,
       'status_aktif': statusAktif,
       'created_at': createdAt,
       'updated_at': updatedAt,

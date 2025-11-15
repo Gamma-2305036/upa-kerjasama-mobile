@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../components/detail_lowongan_page.dart';
 import '../../services/job_service.dart';
 import '../../models/job_model.dart';
@@ -283,11 +284,9 @@ class _BerandaPageState extends State<BerandaPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
           onTap: () {
-            Navigator.push(
+            PageTransitions.slideTo(
               context,
-              MaterialPageRoute(
-                builder: (context) => DetailLowonganPage(job: job),
-              ),
+              DetailLowonganPage(job: job),
             );
           },
           child: Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:math';
+import 'utils/page_transitions.dart';
 import 'user/components/main_navigation.dart';
 import 'services/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -32,9 +33,9 @@ class _LoginPageState extends State<LoginPage> {
     if (success && mounted) {
       // Check user role and navigate accordingly
       if (authService.hasRole('alumni')) {
-        Navigator.pushReplacement(
+        PageTransitions.fadeReplace(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
+          const MainNavigationWrapper(),
         );
       } else if (authService.hasRole('mitra')) {
         // Navigate to mitra dashboard
@@ -61,9 +62,9 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleGoogleLogin() {
     // Dummy Google login - langsung redirect ke main navigation
-    Navigator.pushReplacement(
+    PageTransitions.fadeReplace(
       context,
-      MaterialPageRoute(builder: (context) => const MainNavigationWrapper()),
+      const MainNavigationWrapper(),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/page_transitions.dart';
 import '../components/detail_perusahaan_page.dart';
 import '../../services/company_service.dart';
 import '../../models/company_model.dart';
@@ -319,11 +320,9 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            Navigator.push(
+            PageTransitions.slideTo(
               context,
-              MaterialPageRoute(
-                builder: (context) => DetailPerusahaanPage(companyData: company.toJson()),
-              ),
+              DetailPerusahaanPage(companyData: company.toJson()),
             );
           },
           child: Padding(
@@ -410,7 +409,7 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                       
                       const SizedBox(height: 8),
                       
-                      // Job count
+                      // Job count (only active jobs)
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -418,7 +417,7 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${company.lowongan.length} lowongan',
+                          '${company.lowongan.where((job) => job.statusAktif == true).length} lowongan',
                           style: TextStyle(
                             fontSize: 12,
                             color: Color(0xFF1A365D),

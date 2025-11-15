@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utils/page_transitions.dart';
 import '../../models/job_model.dart';
 import '../../services/api_service.dart';
 import 'detail_lowongan_page.dart';
@@ -536,9 +537,9 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () {
-            Navigator.push(
+            PageTransitions.slideTo(
               context,
-              MaterialPageRoute(builder: (context) => DetailLowonganPage(job: job)),
+              DetailLowonganPage(job: job),
             );
           },
           child: Padding(
