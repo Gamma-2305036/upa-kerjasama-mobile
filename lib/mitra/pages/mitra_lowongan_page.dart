@@ -79,11 +79,21 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> with SingleTicker
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF1A365D),
-        onPressed: () {
-          PageTransitions.slideTo(
+        onPressed: () async {
+          final result = await PageTransitions.slideTo(
             context,
             const _BuatLowonganPage(),
           );
+          // Refresh data setelah kembali dari halaman buat lowongan
+          if (result == true && mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Provider.of<JobService>(context, listen: false).getMyJobs(
+                refresh: true,
+                archived: _isArchivedTab,
+                search: _searchQuery.isNotEmpty ? _searchQuery : null,
+              );
+            });
+          }
         },
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -473,11 +483,21 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> with SingleTicker
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  PageTransitions.slideTo(
+                                onPressed: () async {
+                                  final result = await PageTransitions.slideTo(
                                     context,
                                     _EditLowonganPage(job: job),
                                   );
+                                  // Refresh data setelah kembali dari halaman edit lowongan
+                                  if (result == true && mounted) {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      Provider.of<JobService>(context, listen: false).getMyJobs(
+                                        refresh: true,
+                                        archived: _isArchivedTab,
+                                        search: _searchQuery.isNotEmpty ? _searchQuery : null,
+                                      );
+                                    });
+                                  }
                                 },
                                 icon: const Icon(Icons.edit, size: 18),
                                 label: const Text('Edit'),
@@ -651,7 +671,7 @@ class _BuatLowonganPageState extends State<_BuatLowonganPage> {
                     final res = await Provider.of<JobService>(context, listen: false).createJob(payload);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Tersimpan')));
-                    if (res['success'] == true) Navigator.pop(context);
+                    if (res['success'] == true) Navigator.pop(context, true);
                   },
                   child: const Text('Simpan Lowongan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                 ),
@@ -841,7 +861,7 @@ class _EditLowonganPageState extends State<_EditLowonganPage> {
                     setState(() => _loading = false);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Diperbarui')));
-                    if (res['success'] == true) Navigator.pop(context);
+                    if (res['success'] == true) Navigator.pop(context, true);
                   },
                   child: _loading
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))

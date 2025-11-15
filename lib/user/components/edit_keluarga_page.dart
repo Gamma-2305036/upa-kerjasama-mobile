@@ -99,7 +99,7 @@ class _EditKeluargaPageState extends State<EditKeluargaPage> {
         await Provider.of<AuthService>(context, listen: false).refreshUser();
         
         // Close page to go back
-        Navigator.pop(context);
+        Navigator.pop(context, true);
         
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(

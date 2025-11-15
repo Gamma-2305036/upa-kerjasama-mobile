@@ -46,7 +46,6 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
 
   Widget _buildHeader() {
     return Container(
-      height: 220,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -59,14 +58,11 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Column(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 20),
-              
               // Title
               Text(
                 'List Perusahaan',
@@ -88,21 +84,14 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                 ),
               ),
               
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               
               // Search bar
               Container(
-                height: 50,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
                   controller: _searchController,
@@ -111,26 +100,52 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                       _query = value;
                     });
                     // Search companies with debounce
-                    Future.delayed(Duration(milliseconds: 500), () {
-                      if (_query == value) {
-                        Provider.of<CompanyService>(context, listen: false)
-                            .searchCompanies(value);
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      if (_query == value && mounted) {
+                        if (value.isNotEmpty) {
+                          Provider.of<CompanyService>(context, listen: false)
+                              .searchCompanies(value);
+                        } else {
+                          Provider.of<CompanyService>(context, listen: false)
+                              .loadCompanies();
+                        }
                       }
                     });
                   },
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Cari perusahaan...',
                     hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 16,
+                      color: Colors.grey[500],
+                      fontSize: 14,
                     ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Colors.grey[400],
-                      size: 24,
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.grey[500],
+                        size: 20,
+                      ),
                     ),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: Colors.grey[500], size: 20),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                              Provider.of<CompanyService>(context, listen: false)
+                                  .loadCompanies();
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(),
+                          )
+                        : null,
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    isDense: true,
                   ),
                 ),
               ),
@@ -138,8 +153,7 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildMainContent() {

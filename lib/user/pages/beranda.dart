@@ -14,6 +14,7 @@ class BerandaPage extends StatefulWidget {
 
 class _BerandaPageState extends State<BerandaPage> {
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -28,6 +29,22 @@ class _BerandaPageState extends State<BerandaPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+    // Debounce search - tunggu 500ms setelah user berhenti mengetik
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == value && mounted) {
+        if (value.isNotEmpty) {
+          Provider.of<JobService>(context, listen: false).searchJobs(value);
+        } else {
+          Provider.of<JobService>(context, listen: false).clearFilters();
+        }
+      }
+    });
   }
 
   @override
@@ -50,7 +67,6 @@ class _BerandaPageState extends State<BerandaPage> {
 
   Widget _buildHeader() {
     return Container(
-      height: 200,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -63,12 +79,11 @@ class _BerandaPageState extends State<BerandaPage> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 20),
-              
               // "Untuk Kamu" text
               Text(
                 'Untuk Kamu',
@@ -79,43 +94,58 @@ class _BerandaPageState extends State<BerandaPage> {
                 ),
               ),
               
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               
               // Search bar
               Container(
-                height: 50,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(25),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
                   controller: _searchController,
+                  onChanged: _onSearchChanged,
                   onSubmitted: (value) {
                     if (value.isNotEmpty) {
                       Provider.of<JobService>(context, listen: false).searchJobs(value);
+                    } else {
+                      Provider.of<JobService>(context, listen: false).clearFilters();
                     }
                   },
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[800],
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Cari lowongan kerja...',
                     hintStyle: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
+                      color: Colors.grey[500],
+                      fontSize: 14,
                     ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Colors.grey[600],
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.grey[500],
+                        size: 20,
+                      ),
                     ),
-                    suffixIcon: _searchController.text.isNotEmpty
+                    suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: Icon(Icons.clear, color: Colors.grey[600]),
+                            icon: Icon(Icons.clear, color: Colors.grey[500], size: 20),
                             onPressed: () {
                               _searchController.clear();
+                              setState(() => _searchQuery = '');
                               Provider.of<JobService>(context, listen: false).clearFilters();
                             },
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(),
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    isDense: true,
                   ),
                 ),
               ),

@@ -682,6 +682,119 @@ class ApiService {
     }
   }
 
+  // Check if profile is complete (for application validation)
+  static Future<Map<String, dynamic>> checkProfileCompletion() async {
+    try {
+      final res = await getProfile();
+      if (res['success'] != true) {
+        return {
+          'success': false,
+          'isComplete': false,
+          'message': res['message'] ?? 'Gagal mengecek kelengkapan profil',
+        };
+      }
+
+      final data = res['data'];
+      final profile = data['profile'] ?? data['alumni'] ?? {};
+      final academic = data['data_akademik'] ?? {};
+      final family = data['data_keluarga'] ?? {};
+      final documents = data['dokumen_pendukung'] ?? [];
+
+      int completed = 0;
+      int total = 0;
+      List<String> missingFields = [];
+
+      // Check profile data (8 required fields)
+      final profileFields = [
+        'nim', 'nik', 'no_hp', 'tempat_lahir', 
+        'tanggal_lahir', 'jenis_kelamin', 'alamat', 'cv_url'
+      ];
+      total += profileFields.length;
+      for (var field in profileFields) {
+        final value = profile[field];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          completed++;
+        } else {
+          missingFields.add(_getFieldLabel(field));
+        }
+      }
+
+      // Check academic data (5 required fields)
+      final academicFields = ['program_studi', 'universitas', 'tahun_masuk', 'tahun_lulus', 'ipk'];
+      total += academicFields.length;
+      for (var field in academicFields) {
+        final value = academic[field];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          completed++;
+        } else {
+          missingFields.add(_getFieldLabel(field));
+        }
+      }
+
+      // Check family data (4 required fields)
+      final familyFields = ['nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu'];
+      total += familyFields.length;
+      for (var field in familyFields) {
+        final value = family[field];
+        if (value != null && value.toString().trim().isNotEmpty) {
+          completed++;
+        } else {
+          missingFields.add(_getFieldLabel(field));
+        }
+      }
+
+      // Check documents (at least 1 document)
+      total += 1;
+      if (documents.isNotEmpty) {
+        completed++;
+      } else {
+        missingFields.add('Dokumen Pendukung');
+      }
+
+      final percentage = total > 0 ? ((completed / total) * 100).round() : 0;
+      final isComplete = percentage >= 80;
+
+      return {
+        'success': true,
+        'isComplete': isComplete,
+        'percentage': percentage,
+        'missingFields': missingFields,
+        'message': isComplete 
+            ? 'Profil sudah lengkap' 
+            : 'Profil belum lengkap. Silakan lengkapi data yang masih kosong.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'isComplete': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
+  static String _getFieldLabel(String field) {
+    final labels = {
+      'nim': 'NIM',
+      'nik': 'NIK',
+      'no_hp': 'No. HP',
+      'tempat_lahir': 'Tempat Lahir',
+      'tanggal_lahir': 'Tanggal Lahir',
+      'jenis_kelamin': 'Jenis Kelamin',
+      'alamat': 'Alamat',
+      'cv_url': 'CV',
+      'program_studi': 'Program Studi',
+      'universitas': 'Universitas',
+      'tahun_masuk': 'Tahun Masuk',
+      'tahun_lulus': 'Tahun Lulus',
+      'ipk': 'IPK',
+      'nama_ayah': 'Nama Ayah',
+      'pekerjaan_ayah': 'Pekerjaan Ayah',
+      'nama_ibu': 'Nama Ibu',
+      'pekerjaan_ibu': 'Pekerjaan Ibu',
+    };
+    return labels[field] ?? field;
+  }
+
   // Get companies list
   static Future<Map<String, dynamic>> getCompanies({String? search}) async {
     try {
