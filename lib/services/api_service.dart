@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../config/api_config.dart';
 
 class ApiService {
@@ -620,6 +622,108 @@ class ApiService {
     }
   }
 
+  // Mitra: download all applicants data as ZIP
+  static Future<Map<String, dynamic>> downloadApplicantsZip(String jobId) async {
+    try {
+      final url = Uri.parse('$baseUrl/mitra/jobs/$jobId/download-applicants');
+      final response = await http
+          .get(
+        url,
+        headers: _getHeaders(),
+      )
+          .timeout(const Duration(seconds: 300)); // Longer timeout for file download (5 minutes)
+
+      if (response.statusCode == 200) {
+        // Check if response is a ZIP file
+        final contentType = response.headers['content-type'] ?? '';
+        final contentDisposition = response.headers['content-disposition'] ?? '';
+        
+        // Extract filename from content-disposition header if available
+        String fileName = 'data_pelamar_$jobId.zip';
+        if (contentDisposition.isNotEmpty) {
+          // Try to extract filename from content-disposition header
+          // Format: attachment; filename="filename.zip" or filename=filename.zip
+          // Try with double quotes first
+          final doubleQuoteMatch = RegExp(r'filename\*?="([^"]+)"').firstMatch(contentDisposition);
+          if (doubleQuoteMatch != null && doubleQuoteMatch.groupCount >= 1) {
+            final extractedName = doubleQuoteMatch.group(1);
+            if (extractedName != null && extractedName.isNotEmpty) {
+              fileName = extractedName.trim();
+            }
+          } else {
+            // Try with single quotes
+            final singleQuoteMatch = RegExp(r"filename\*?='([^']+)'").firstMatch(contentDisposition);
+            if (singleQuoteMatch != null && singleQuoteMatch.groupCount >= 1) {
+              final extractedName = singleQuoteMatch.group(1);
+              if (extractedName != null && extractedName.isNotEmpty) {
+                fileName = extractedName.trim();
+              }
+            } else {
+              // Try without quotes: filename=filename.zip
+              final unquotedMatch = RegExp(r'filename\*?=([^;\n]+)').firstMatch(contentDisposition);
+              if (unquotedMatch != null && unquotedMatch.groupCount >= 1) {
+                final extractedName = unquotedMatch.group(1);
+                if (extractedName != null && extractedName.isNotEmpty) {
+                  fileName = extractedName.trim();
+                }
+              }
+            }
+          }
+        }
+        
+        if (contentType.contains('application/zip') || 
+            contentType.contains('application/x-zip-compressed') ||
+            contentType.contains('application/octet-stream') ||
+            response.bodyBytes.length > 100) { // Assume it's a ZIP if it's a binary file
+          // Save file to device
+          final directory = await getApplicationDocumentsDirectory();
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final filePath = '${directory.path}/$fileName';
+          final file = File(filePath);
+          await file.writeAsBytes(response.bodyBytes);
+          
+          return {
+            'success': true,
+            'filePath': filePath,
+            'message': 'Data pelamar berhasil diunduh',
+          };
+        } else {
+          // Try to parse as JSON error
+          try {
+            final data = jsonDecode(response.body);
+            return {
+              'success': false,
+              'message': data['message'] ?? 'Gagal mengunduh data pelamar',
+            };
+          } catch (e) {
+            return {
+              'success': false,
+              'message': 'Format file tidak valid',
+            };
+          }
+        }
+      } else {
+        try {
+          final data = jsonDecode(response.body);
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Gagal mengunduh data pelamar',
+          };
+        } catch (e) {
+          return {
+            'success': false,
+            'message': 'Gagal mengunduh data pelamar (Status: ${response.statusCode})',
+          };
+        }
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
   // Mitra: unarchive an application
   static Future<Map<String, dynamic>> unarchiveApplication(String applicationId) async {
     try {
@@ -704,10 +808,10 @@ class ApiService {
       int total = 0;
       List<String> missingFields = [];
 
-      // Check profile data (8 required fields)
+      // Check profile data (7 required fields - CV tidak termasuk di sini)
       final profileFields = [
         'nim', 'nik', 'no_hp', 'tempat_lahir', 
-        'tanggal_lahir', 'jenis_kelamin', 'alamat', 'cv_url'
+        'tanggal_lahir', 'jenis_kelamin', 'alamat'
       ];
       total += profileFields.length;
       for (var field in profileFields) {
@@ -743,12 +847,47 @@ class ApiService {
         }
       }
 
-      // Check documents (at least 1 document)
-      total += 1;
+      // Check documents - CV termasuk di sini sebagai dokumen pendukung
+      // Cek apakah ada CV di dokumen pendukung
+      bool hasCvInDocuments = false;
+      bool hasOtherDocuments = false;
+      
       if (documents.isNotEmpty) {
+        for (var doc in documents) {
+          final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ?? 
+                              doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
+          if (jenisDokumen == 'cv') {
+            hasCvInDocuments = true;
+          } else if (jenisDokumen.isNotEmpty) {
+            hasOtherDocuments = true;
+          }
+        }
+      }
+      
+      // Cek juga CV dari profile/file_cv (untuk backward compatibility)
+      final hasCvFromProfile = (profile['cv_url'] != null && profile['cv_url'].toString().trim().isNotEmpty && profile['cv_url'].toString().trim() != 'null') ||
+                              (profile['file_cv'] != null && profile['file_cv'].toString().trim().isNotEmpty && profile['file_cv'].toString().trim() != 'null');
+      
+      // Dokumen lengkap jika ada minimal 1 dokumen (termasuk CV)
+      bool isDocumentsComplete = documents.isNotEmpty;
+      
+      // Jika ada CV dari profile tapi belum ada di dokumen pendukung, tetap dianggap ada dokumen
+      if (hasCvFromProfile && !hasCvInDocuments) {
+        isDocumentsComplete = true; // Tetap dianggap lengkap jika ada CV di profile
+      }
+      
+      total += 1;
+      if (isDocumentsComplete) {
         completed++;
       } else {
         missingFields.add('Dokumen Pendukung');
+      }
+      
+      // Jika ada dokumen lain tapi tidak ada CV (baik di dokumen pendukung maupun profile), tambahkan CV ke missing fields
+      if (hasOtherDocuments && !hasCvInDocuments && !hasCvFromProfile) {
+        if (!missingFields.contains('CV')) {
+          missingFields.add('CV');
+        }
       }
 
       final percentage = total > 0 ? ((completed / total) * 100).round() : 0;

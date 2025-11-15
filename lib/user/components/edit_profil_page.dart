@@ -76,14 +76,16 @@ class _EditProfilPageState extends State<EditProfilPage> {
   }
 
   void _calculateCompletion() {
-    int completedSections = 0;
-    const int totalSections = 4; // Detail Profile, Akademik, Keluarga, Dokumen
-    
     print('\n🔍 ========== CALCULATING PROFILE COMPLETION ==========');
     
-    // 1. Check Detail Profile (25%)
+    // Hitung berdasarkan field individual dengan bobot per section
+    double totalWeight = 0.0;
+    double completedWeight = 0.0;
+    
+    // 1. Check Detail Profile (25% total, 7 field profile saja - CV tidak termasuk di sini)
     final profile = _profileData ?? {};
-    bool isProfileComplete = false;
+    const double profileSectionWeight = 25.0; // 25% dari total
+    const int totalProfileFields = 7; // 7 field profile (CV tidak termasuk)
     
     final profileRequiredFields = [
       'nim', 'nik', 'no_hp', 'tempat_lahir', 
@@ -103,26 +105,18 @@ class _EditProfilPageState extends State<EditProfilPage> {
       }
     }
     
-    // Check CV - bisa dari profile, data level, atau _cvUrl
-    final hasCv = (_cvUrl != null && _cvUrl!.trim().isNotEmpty && _cvUrl!.trim() != 'null') ||
-                  (profile['cv_url'] != null && profile['cv_url'].toString().trim().isNotEmpty && profile['cv_url'].toString().trim() != 'null') ||
-                  (profile['file_cv'] != null && profile['file_cv'].toString().trim().isNotEmpty && profile['file_cv'].toString().trim() != 'null');
+    // CV tidak dihitung di Section 1, karena CV masuk ke dokumen pendukung
+    double profileSectionPercentage = (profileCompleted / totalProfileFields) * profileSectionWeight;
+    totalWeight += profileSectionWeight;
+    completedWeight += profileSectionPercentage;
     
-    print('  CV Check: $_cvUrl | ${profile['cv_url']} | ${profile['file_cv']}');
-    print('  CV Found: $hasCv');
-    
-    // Detail profile lengkap jika semua field terisi + ada CV
-    isProfileComplete = profileCompleted == profileRequiredFields.length && hasCv;
-    if (isProfileComplete) {
-      completedSections++;
-      print('  ✅ Section 1: Detail Profile LENGKAP');
-    } else {
-      print('  ❌ Section 1: Detail Profile TIDAK LENGKAP (Profile: $profileCompleted/${profileRequiredFields.length}, CV: $hasCv)');
-    }
+    print('  Section 1 Progress: $profileCompleted/$totalProfileFields fields (${((profileCompleted / totalProfileFields) * 100).toStringAsFixed(1)}%)');
+    print('  Section 1 Weight: ${profileSectionPercentage.toStringAsFixed(2)}% / $profileSectionWeight%');
+    print('  Note: CV dihitung sebagai bagian dari dokumen pendukung, bukan di sini');
 
-    // 2. Check Informasi Akademik (25%)
+    // 2. Check Informasi Akademik (25% total, 5 fields)
     final academic = _academicData ?? {};
-    bool isAcademicComplete = false;
+    const double academicSectionWeight = 25.0; // 25% dari total
     
     print('\n📚 Section 2: Informasi Akademik');
     print('  Academic data: $academic');
@@ -144,18 +138,16 @@ class _EditProfilPageState extends State<EditProfilPage> {
       }
     }
     
-    // Akademik lengkap jika semua field terisi
-    isAcademicComplete = academicCompleted == academicRequiredFields.length;
-    if (isAcademicComplete) {
-      completedSections++;
-      print('  ✅ Section 2: Informasi Akademik LENGKAP');
-    } else {
-      print('  ❌ Section 2: Informasi Akademik TIDAK LENGKAP ($academicCompleted/${academicRequiredFields.length})');
-    }
+    double academicSectionPercentage = (academicCompleted / academicRequiredFields.length) * academicSectionWeight;
+    totalWeight += academicSectionWeight;
+    completedWeight += academicSectionPercentage;
+    
+    print('  Section 2 Progress: $academicCompleted/${academicRequiredFields.length} fields (${((academicCompleted / academicRequiredFields.length) * 100).toStringAsFixed(1)}%)');
+    print('  Section 2 Weight: ${academicSectionPercentage.toStringAsFixed(2)}% / $academicSectionWeight%');
 
-    // 3. Check Data Keluarga (25%)
+    // 3. Check Data Keluarga (25% total, 4 fields)
     final family = _familyData ?? {};
-    bool isFamilyComplete = false;
+    const double familySectionWeight = 25.0; // 25% dari total
     
     print('\n👨‍👩‍👧 Section 3: Data Keluarga');
     print('  Family data: $family');
@@ -174,43 +166,69 @@ class _EditProfilPageState extends State<EditProfilPage> {
       }
     }
     
-    // Keluarga lengkap jika semua field terisi
-    isFamilyComplete = familyCompleted == familyRequiredFields.length;
-    if (isFamilyComplete) {
-      completedSections++;
-      print('  ✅ Section 3: Data Keluarga LENGKAP');
-    } else {
-      print('  ❌ Section 3: Data Keluarga TIDAK LENGKAP ($familyCompleted/${familyRequiredFields.length})');
-    }
+    double familySectionPercentage = (familyCompleted / familyRequiredFields.length) * familySectionWeight;
+    totalWeight += familySectionWeight;
+    completedWeight += familySectionPercentage;
+    
+    print('  Section 3 Progress: $familyCompleted/${familyRequiredFields.length} fields (${((familyCompleted / familyRequiredFields.length) * 100).toStringAsFixed(1)}%)');
+    print('  Section 3 Weight: ${familySectionPercentage.toStringAsFixed(2)}% / $familySectionWeight%');
 
-    // 4. Check Dokumen Pendukung (25%)
-    bool isDocumentsComplete = false;
+    // 4. Check Dokumen Pendukung (25% total)
+    // CV termasuk di sini sebagai dokumen pendukung dengan jenis_dokumen = 'cv'
+    const double documentsSectionWeight = 25.0; // 25% dari total
     
     print('\n📄 Section 4: Dokumen Pendukung');
     print('  Documents: $_documents');
     print('  Documents count: ${_documents?.length ?? 0}');
     
-    // Dokumen lengkap jika ada minimal 1 dokumen
-    isDocumentsComplete = _documents != null && _documents!.isNotEmpty;
-    if (isDocumentsComplete) {
-      completedSections++;
-      print('  ✅ Section 4: Dokumen Pendukung LENGKAP (${_documents!.length} dokumen)');
-    } else {
-      print('  ❌ Section 4: Dokumen Pendukung TIDAK LENGKAP (${_documents?.length ?? 0} dokumen)');
+    // Cek apakah ada CV di dokumen pendukung
+    bool hasCvInDocuments = false;
+    if (_documents != null && _documents!.isNotEmpty) {
+      for (var doc in _documents!) {
+        final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ?? 
+                            doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
+        if (jenisDokumen == 'cv') {
+          hasCvInDocuments = true;
+          print('  ✅ CV ditemukan di dokumen pendukung');
+          break;
+        }
+      }
     }
+    
+    // Cek juga CV dari profile/file_cv (untuk backward compatibility)
+    final hasCvFromProfile = (_cvUrl != null && _cvUrl!.trim().isNotEmpty && _cvUrl!.trim() != 'null') ||
+                            (profile['cv_url'] != null && profile['cv_url'].toString().trim().isNotEmpty && profile['cv_url'].toString().trim() != 'null') ||
+                            (profile['file_cv'] != null && profile['file_cv'].toString().trim().isNotEmpty && profile['file_cv'].toString().trim() != 'null');
+    
+    // Dokumen lengkap jika ada minimal 1 dokumen (termasuk CV)
+    bool isDocumentsComplete = _documents != null && _documents!.isNotEmpty;
+    
+    // Jika ada CV dari profile tapi belum ada di dokumen pendukung, tetap dianggap ada dokumen
+    if (hasCvFromProfile && !hasCvInDocuments) {
+      print('  ℹ️ CV ditemukan di profile/file_cv (backward compatibility)');
+      isDocumentsComplete = true; // Tetap dianggap lengkap jika ada CV di profile
+    }
+    
+    double documentsSectionPercentage = isDocumentsComplete ? documentsSectionWeight : 0.0;
+    totalWeight += documentsSectionWeight;
+    completedWeight += documentsSectionPercentage;
+    
+    print('  Section 4 Progress: ${isDocumentsComplete ? 1 : 0}/1 (minimal 1 dokumen, termasuk CV)');
+    print('  Section 4 Weight: ${documentsSectionPercentage.toStringAsFixed(2)}% / $documentsSectionWeight%');
 
-    // Calculate percentage: setiap section = 25%
-    final percentage = ((completedSections / totalSections) * 100).round();
+    // Calculate final percentage
+    final percentage = totalWeight > 0 ? ((completedWeight / totalWeight) * 100).round() : 0;
     
     print('\n📊 ========== RESULT ==========');
-    print('  Total Sections Completed: $completedSections/$totalSections');
+    print('  Total Weight: ${totalWeight.toStringAsFixed(2)}%');
+    print('  Completed Weight: ${completedWeight.toStringAsFixed(2)}%');
     print('  Completion Percentage: $percentage%');
     print('  Profile Complete (>=80%): ${percentage >= 80}');
     print('================================\n');
     
     setState(() {
       _completionPercentage = percentage;
-      _isProfileComplete = percentage >= 80; // Profile dianggap lengkap jika >= 80% (3 dari 4 section)
+      _isProfileComplete = percentage >= 80; // Profile dianggap lengkap jika >= 80%
     });
   }
 
@@ -519,13 +537,12 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Detail Profil
               InkWell(
                 onTap: () async {
-                  final result = await PageTransitions.slideTo(
+                  await PageTransitions.slideTo(
                     context,
                     const EditProfilDetailPage(),
                   );
-                  if (result == true) {
-                    _loadProfileData();
-                  }
+                  // Always refresh when returning from edit page
+                  _loadProfileData();
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
@@ -604,13 +621,12 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Informasi Akademik
               InkWell(
                 onTap: () async {
-                  final result = await PageTransitions.slideTo(
+                  await PageTransitions.slideTo(
                     context,
                     const EditAcademicInfoPage(),
                   );
-                  if (result == true) {
-                    _loadProfileData();
-                  }
+                  // Always refresh when returning from edit page
+                  _loadProfileData();
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
@@ -689,13 +705,12 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Data Keluarga
               InkWell(
                 onTap: () async {
-                  final result = await PageTransitions.slideTo(
+                  await PageTransitions.slideTo(
                     context,
                     const EditKeluargaPage(),
                   );
-                  if (result == true) {
-                    _loadProfileData();
-                  }
+                  // Always refresh when returning from edit page
+                  _loadProfileData();
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
@@ -774,13 +789,12 @@ class _EditProfilPageState extends State<EditProfilPage> {
               // Card Edit Dokumen Pendukung
               InkWell(
                 onTap: () async {
-                  final result = await PageTransitions.slideTo(
+                  await PageTransitions.slideTo(
                     context,
                     const EditDokumenPage(),
                   );
-                  if (result == true) {
-                    _loadProfileData();
-                  }
+                  // Always refresh when returning from edit page
+                  _loadProfileData();
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(

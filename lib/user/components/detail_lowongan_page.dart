@@ -610,11 +610,12 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
   }
 
   void _applyJob() async {
-    // Check profile completion first
+    // Check profile completion first - must be 100%
     final completionCheck = await ApiService.checkProfileCompletion();
     
-    if (completionCheck['success'] != true || completionCheck['isComplete'] != true) {
-      // Show alert to complete profile
+    final percentage = completionCheck['percentage'] ?? 0;
+    if (completionCheck['success'] != true || percentage < 100) {
+      // Show alert to complete profile - must be 100%
       _showProfileIncompleteDialog(completionCheck);
       return;
     }
@@ -690,7 +691,7 @@ class _DetailLowonganPageState extends State<DetailLowonganPage> with SingleTick
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Profil Anda baru terisi $percentage%. Untuk dapat melamar lowongan, profil harus minimal 80% lengkap.',
+                'Profil Anda baru terisi $percentage%. Untuk dapat melamar lowongan, profil harus 100% lengkap terlebih dahulu.',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[700],

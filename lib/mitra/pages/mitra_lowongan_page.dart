@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:open_file/open_file.dart';
 import '../../user/components/pdf_viewer_page.dart';
 import 'package:provider/provider.dart';
 import '../../utils/page_transitions.dart';
@@ -1035,6 +1036,14 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
         foregroundColor: const Color(0xFF1A365D),
         elevation: 0.5,
         title: const Text('Detail Lowongan', style: TextStyle(color: Color(0xFF1A365D))),
+        actions: [
+          if (currentApps.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.download, color: Color(0xFF1A365D)),
+              tooltip: 'Download Data Pelamar',
+              onPressed: () => _downloadAllApplicantsData(),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF1A365D),
@@ -1138,7 +1147,6 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     final pelamar = app['pelamar'] as Map<String, dynamic>?;
     final name = pelamar?['name'] ?? 'Pelamar';
     final email = pelamar?['email'] ?? '-';
-    final cvUrl = pelamar?['cv_url'] as String?;
     final status = (app['status'] ?? '').toString();
     Color color;
     switch (status) {
@@ -1201,42 +1209,26 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
             ],
           ),
           const SizedBox(height: 12),
-          // Action buttons row
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    PageTransitions.slideTo(
-                      context,
-                      _ApplicantDetailPage(
-                        application: app,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.person_search, size: 18),
-                  label: const Text('Lihat Pelamar', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1A365D),
-                    side: const BorderSide(color: Color(0xFF1A365D)),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+          // Action button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                PageTransitions.slideTo(
+                  context,
+                  _ApplicantDetailPage(
+                    application: app,
                   ),
-                ),
+                );
+              },
+              icon: const Icon(Icons.person_search, size: 18),
+              label: const Text('Lihat Pelamar', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1A365D),
+                side: const BorderSide(color: Color(0xFF1A365D)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: cvUrl != null ? () => _openPdf(cvUrl) : null,
-                  icon: const Icon(Icons.picture_as_pdf, size: 18),
-                  label: const Text('Lihat CV', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1A365D),
-                    side: const BorderSide(color: Color(0xFF1A365D)),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 8),
           // Status button row
@@ -1422,6 +1414,111 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     }
     
     PageTransitions.slideTo(context, PdfViewerPage(url: fullUrl, title: 'CV Pelamar'));
+  }
+
+  Future<void> _downloadAllApplicantsData() async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Download Data Pelamar'),
+        content: Text(
+          'Download semua data pelamar (${_allApps.length} pelamar) dalam format ZIP? '
+          'File akan berisi profil, data akademik, data keluarga, dan dokumen pendukung.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A365D),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF1A365D)),
+                SizedBox(height: 16),
+                Text('Mengunduh data pelamar...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final result = await ApiService.downloadApplicantsZip(widget.jobId);
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      if (result['success'] == true) {
+        final filePath = result['filePath'] as String?;
+        if (filePath != null && filePath.isNotEmpty) {
+          // Try to open file
+          try {
+            await OpenFile.open(filePath);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Data pelamar berhasil diunduh dan dibuka!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('File berhasil diunduh di: $filePath'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File berhasil diunduh'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Gagal mengunduh data pelamar'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

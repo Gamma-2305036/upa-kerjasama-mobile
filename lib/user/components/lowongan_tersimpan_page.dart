@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/job_model.dart';
+import 'edit_profil_page.dart';
 
 class LowonganTersimpanPage extends StatefulWidget {
   const LowonganTersimpanPage({super.key});
@@ -524,7 +525,18 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
     );
   }
 
-  void _applyJob(Map<String, dynamic> job) {
+  void _applyJob(Map<String, dynamic> job) async {
+    // Check profile completion first - must be 100%
+    final completionCheck = await ApiService.checkProfileCompletion();
+    
+    final percentage = completionCheck['percentage'] ?? 0;
+    if (completionCheck['success'] != true || percentage < 100) {
+      // Show alert to complete profile - must be 100%
+      _showProfileIncompleteDialog(completionCheck);
+      return;
+    }
+
+    // Profile is complete, proceed with application
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -562,6 +574,130 @@ class _LowonganTersimpanPageState extends State<LowonganTersimpanPage> {
               }
             },
             child: Text('Lamar', style: TextStyle(color: Color(0xFF1A365D))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showProfileIncompleteDialog(Map<String, dynamic> completionCheck) {
+    final percentage = completionCheck['percentage'] ?? 0;
+    final missingFields = completionCheck['missingFields'] as List<dynamic>? ?? [];
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Profil Belum Lengkap',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A365D),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Profil Anda baru terisi $percentage%. Untuk dapat melamar lowongan, profil harus 100% lengkap terlebih dahulu.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+              ),
+              if (missingFields.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Data yang masih perlu dilengkapi:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A365D),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...missingFields.take(5).map((field) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.circle, size: 6, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          field.toString(),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+                if (missingFields.length > 5)
+                  Text(
+                    'dan ${missingFields.length - 5} data lainnya...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Nanti',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to edit profile page
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EditProfilPage(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF1A365D),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.edit, size: 18),
+                const SizedBox(width: 8),
+                Text('Lengkapi Profil'),
+              ],
+            ),
           ),
         ],
       ),

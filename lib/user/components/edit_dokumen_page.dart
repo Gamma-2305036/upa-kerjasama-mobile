@@ -20,6 +20,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
   final Map<String, String?> _documentIds = {};
   bool _isLoading = false;
   bool _hasChanges = false;
+  bool _hasUploadedOrDeleted = false; // Track if any document was uploaded or deleted
 
   final Map<String, String> _dokumenTypes = {
     'cv': 'CV',
@@ -117,6 +118,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
           _fileUrls[jenisDokumen] = result['data']['file_url'] as String?;
           _documentIds[jenisDokumen] = result['data']['id']?.toString();
           _hasChanges = false;
+          _hasUploadedOrDeleted = true; // Mark that document was uploaded
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,6 +159,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
           _fileUrls.remove(jenisDokumen);
           _documentIds.remove(jenisDokumen);
           _hasChanges = true;
+          _hasUploadedOrDeleted = true; // Mark that document was deleted
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -288,7 +291,7 @@ class _EditDokumenPageState extends State<EditDokumenPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _hasUploadedOrDeleted),
         ),
         title: Text(
           'Edit Dokumen Pendukung',
