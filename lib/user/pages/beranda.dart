@@ -4,6 +4,7 @@ import '../../utils/page_transitions.dart';
 import '../components/detail_lowongan_page.dart';
 import '../../services/job_service.dart';
 import '../../models/job_model.dart';
+import '../../services/api_service.dart';
 
 class BerandaPage extends StatefulWidget {
   const BerandaPage({super.key});
@@ -334,11 +335,7 @@ class _BerandaPageState extends State<BerandaPage> {
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        Icons.business,
-                        color: Colors.grey[600],
-                        size: 30,
-                      ),
+                      child: _buildCompanyLogo(job.mitraPerusahaan?.logo),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
@@ -464,5 +461,49 @@ class _BerandaPageState extends State<BerandaPage> {
       return 'Rp $max';
     }
     return 'Gaji tidak disebutkan';
+  }
+
+  Widget _buildCompanyLogo(String? logo) {
+    if (logo == null || logo.isEmpty) {
+      return Icon(
+        Icons.business,
+        color: Colors.grey[600],
+        size: 30,
+      );
+    }
+    
+    // Construct URL if not already a full URL
+    String logoUrl;
+    if (logo.startsWith('http')) {
+      logoUrl = logo;
+    } else {
+      logoUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+    }
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        logoUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.business,
+            color: Colors.grey[600],
+            size: 30,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+      ),
+    );
   }
 }

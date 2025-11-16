@@ -71,11 +71,13 @@ class Company {
 
     final lowonganRaw = _normalizeLowongan(json['lowongan']);
 
+    // Support both logo and logo_url
+    final logoValue = json['logo_url'] ?? json['logo'];
     return Company(
       id: json['id'] ?? '',
       userId: json['user_id'] ?? '',
       namaPerusahaan: json['nama_perusahaan'] ?? '',
-      logo: json['logo'],
+      logo: logoValue,
       sektor: json['sektor'],
       kontak: json['kontak'],
       tautan: json['tautan'],

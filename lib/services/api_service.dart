@@ -1007,25 +1007,78 @@ class ApiService {
   }
 
   // Update mitra company profile
-  static Future<Map<String, dynamic>> updateCompanyProfile(Map<String, dynamic> payload) async {
+  static Future<Map<String, dynamic>> updateCompanyProfile(Map<String, dynamic> payload, {String? logoPath}) async {
     try {
-      final response = await http
-          .put(
-        Uri.parse('$baseUrl/mitra/company'),
-        headers: _getHeaders(),
-        body: jsonEncode(payload),
-      )
-          .timeout(const Duration(seconds: 15));
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success'] == true) {
-        return data;
+      // If logo is provided, use multipart request
+      if (logoPath != null && logoPath.isNotEmpty) {
+        final uri = Uri.parse('$baseUrl/mitra/company');
+        final request = http.MultipartRequest('POST', uri);
+        
+        // Add headers (except content-type, let multipart set it)
+        _getHeaders().forEach((k, v) {
+          if (k.toLowerCase() != 'content-type') {
+            request.headers[k] = v;
+          }
+        });
+        
+        // No need for method override, route already supports POST
+        
+        // Add text fields
+        payload.forEach((key, value) {
+          if (value != null && key != 'logo') {
+            if (value is List) {
+              // Handle array fields like keunggulan - send as JSON string
+              // Always send as JSON array (even if empty), Laravel will handle it
+              request.fields[key] = jsonEncode(value);
+            } else {
+              final stringValue = value.toString().trim();
+              // Only send non-empty strings (for nullable fields)
+              if (stringValue.isNotEmpty || key == 'nama_perusahaan') {
+                request.fields[key] = stringValue;
+              }
+            }
+          }
+        });
+        
+        // Add logo file
+        request.files.add(await http.MultipartFile.fromPath(
+          'logo',
+          logoPath,
+          contentType: MediaType('image', 'jpeg'),
+        ));
+        
+        final streamed = await request.send().timeout(const Duration(seconds: 20));
+        final response = await http.Response.fromStream(streamed);
+        final data = jsonDecode(response.body);
+        
+        if (response.statusCode == 200 && data['success'] == true) {
+          return data;
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Gagal memperbarui profil perusahaan',
+          };
+        }
       } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Gagal memperbarui profil perusahaan',
-        };
+        // No logo, use regular JSON request
+        final response = await http
+            .put(
+          Uri.parse('$baseUrl/mitra/company'),
+          headers: _getHeaders(),
+          body: jsonEncode(payload),
+        )
+            .timeout(const Duration(seconds: 15));
+
+        final data = jsonDecode(response.body);
+
+        if (response.statusCode == 200 && data['success'] == true) {
+          return data;
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Gagal memperbarui profil perusahaan',
+          };
+        }
       }
     } on TimeoutException {
       return {
@@ -1101,24 +1154,68 @@ class ApiService {
   }
 
   // Update alumni detail profile (comprehensive fields)
-  static Future<Map<String, dynamic>> updateAlumniDetail(Map<String, dynamic> payload) async {
+  static Future<Map<String, dynamic>> updateAlumniDetail(Map<String, dynamic> payload, {String? fotoProfilPath}) async {
     try {
-      final response = await http
-          .put(
-        Uri.parse('$baseUrl/alumni/profile/detail'),
-        headers: _getHeaders(),
-        body: jsonEncode(payload),
-      )
-          .timeout(const Duration(seconds: 15));
+      // If foto profil is provided, use multipart request
+      if (fotoProfilPath != null && fotoProfilPath.isNotEmpty) {
+        final uri = Uri.parse('$baseUrl/alumni/profile/detail');
+        final request = http.MultipartRequest('POST', uri);
+        
+        // Add headers (except content-type, let multipart set it)
+        _getHeaders().forEach((k, v) {
+          if (k.toLowerCase() != 'content-type') {
+            request.headers[k] = v;
+          }
+        });
+        
+        // Add text fields
+        payload.forEach((key, value) {
+          if (value != null && key != 'foto_profil') {
+            final stringValue = value.toString().trim();
+            if (stringValue.isNotEmpty || key == 'name' || key == 'email') {
+              request.fields[key] = stringValue;
+            }
+          }
+        });
+        
+        // Add foto profil file
+        request.files.add(await http.MultipartFile.fromPath(
+          'foto_profil',
+          fotoProfilPath,
+          contentType: MediaType('image', 'jpeg'),
+        ));
+        
+        final streamed = await request.send().timeout(const Duration(seconds: 20));
+        final response = await http.Response.fromStream(streamed);
+        final data = jsonDecode(response.body);
+        
+        if (response.statusCode == 200 && data['success'] == true) {
+          return data;
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Gagal memperbarui detail profil alumni',
+          };
+        }
+      } else {
+        // Regular JSON request if no foto profil
+        final response = await http
+            .put(
+          Uri.parse('$baseUrl/alumni/profile/detail'),
+          headers: _getHeaders(),
+          body: jsonEncode(payload),
+        )
+            .timeout(const Duration(seconds: 15));
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        return data;
+        final data = jsonDecode(response.body);
+        if (response.statusCode == 200 && data['success'] == true) {
+          return data;
+        }
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Gagal memperbarui detail profil alumni',
+        };
       }
-      return {
-        'success': false,
-        'message': data['message'] ?? 'Gagal memperbarui detail profil alumni',
-      };
     } on TimeoutException {
       return {
         'success': false,

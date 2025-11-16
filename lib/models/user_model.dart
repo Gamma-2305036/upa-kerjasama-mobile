@@ -57,6 +57,7 @@ class AlumniProfile {
   final String? namaBank;
   final String? noRekening;
   final String? fileCv;
+  final String? fotoProfil;
 
   AlumniProfile({
     this.id,
@@ -77,6 +78,7 @@ class AlumniProfile {
     this.namaBank,
     this.noRekening,
     this.fileCv,
+    this.fotoProfil,
   });
 
   factory AlumniProfile.fromJson(Map<String, dynamic> json) {
@@ -100,6 +102,7 @@ class AlumniProfile {
       namaBank: json['nama_bank'],
       noRekening: json['no_rekening'],
       fileCv: json['file_cv'],
+      fotoProfil: json['foto_profil_url'] ?? json['foto_profil'],
     );
   }
 }
@@ -146,10 +149,12 @@ class MitraProfile {
       }
       return null;
     }
+    // Support both logo and logo_url - prefer logo_url if available
+    final logoValue = json['logo_url'] ?? json['logo'];
     return MitraProfile(
       id: json['id'],
       namaPerusahaan: json['nama_perusahaan'],
-      logo: json['logo'],
+      logo: logoValue,
       sektor: json['sektor'],
       kontak: json['kontak'],
       tautan: json['tautan'],

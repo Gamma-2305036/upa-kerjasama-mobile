@@ -149,11 +149,7 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
                       ),
                     ],
                   ),
-                  child: Icon(
-                    Icons.business,
-                    size: 50,
-                    color: Color(0xFF1A365D),
-                  ),
+                  child: _buildCompanyLogo(),
                 ),
                 const SizedBox(height: 15),
                 Text(
@@ -953,6 +949,53 @@ class _DetailPerusahaanPageState extends State<DetailPerusahaanPage> with Single
   void _shareCompany() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Membagikan informasi perusahaan...')),
+    );
+  }
+
+  Widget _buildCompanyLogo() {
+    // Get logo from companyData - support both logo and logo_url
+    final logo = widget.companyData['logo_url'] ?? widget.companyData['logo'];
+    
+    if (logo == null || logo.toString().isEmpty) {
+      return Icon(
+        Icons.business,
+        size: 50,
+        color: Color(0xFF1A365D),
+      );
+    }
+    
+    // Construct URL if not already a full URL
+    String logoUrl;
+    if (logo.toString().startsWith('http')) {
+      logoUrl = logo.toString();
+    } else {
+      logoUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+    }
+    
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Image.network(
+        logoUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.business,
+            size: 50,
+            color: Color(0xFF1A365D),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+      ),
     );
   }
 }

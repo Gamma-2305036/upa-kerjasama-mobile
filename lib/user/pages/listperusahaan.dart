@@ -4,6 +4,7 @@ import '../../utils/page_transitions.dart';
 import '../components/detail_perusahaan_page.dart';
 import '../../services/company_service.dart';
 import '../../models/company_model.dart';
+import '../../services/api_service.dart';
 
 class ListPerusahaanPage extends StatefulWidget {
   const ListPerusahaanPage({super.key});
@@ -351,17 +352,28 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
                     color: Color(0xFF1A365D).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: company.logo != null
+                  child: company.logo != null && company.logo!.isNotEmpty
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.network(
-                            company.logo!,
+                            _getLogoUrl(company.logo!),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Icon(
                                 Icons.business,
                                 color: Color(0xFF1A365D),
                                 size: 30,
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
                               );
                             },
                           ),
@@ -455,6 +467,15 @@ class _ListPerusahaanPageState extends State<ListPerusahaanPage> {
         ),
       ),
     );
+  }
+
+  String _getLogoUrl(String logo) {
+    // If logo is already a full URL, use it; otherwise construct it
+    if (logo.startsWith('http')) {
+      return logo;
+    } else {
+      return '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+    }
   }
 
   @override

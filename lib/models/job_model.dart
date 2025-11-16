@@ -119,10 +119,12 @@ class MitraCompany {
   });
 
   factory MitraCompany.fromJson(Map<String, dynamic> json) {
+    // Support both logo and logo_url
+    final logoValue = json['logo_url'] ?? json['logo'];
     return MitraCompany(
       id: json['id'] ?? '',
       namaPerusahaan: json['nama_perusahaan'] ?? '',
-      logo: json['logo'],
+      logo: logoValue,
       sektor: json['sektor'],
       kontak: json['kontak'],
       tautan: json['tautan'],

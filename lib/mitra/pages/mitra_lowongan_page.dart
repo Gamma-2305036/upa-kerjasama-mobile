@@ -1628,12 +1628,7 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
                         color: Colors.white,
                         child: Row(
                           children: [
-                            Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                              child: const Icon(Icons.person, color: Color(0xFF1A365D)),
-                            ),
+                            _buildFotoProfil(_profile?['foto_profil_url'] ?? _profile?['foto_profil']),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -1937,6 +1932,47 @@ class _ApplicantDetailPageState extends State<_ApplicantDetailPage> with SingleT
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(title, style: const TextStyle(color: Color(0xFF1A365D), fontWeight: FontWeight.w700, fontSize: 16)),
+    );
+  }
+
+  Widget _buildFotoProfil(String? fotoProfil) {
+    String? fotoUrl;
+    if (fotoProfil != null && fotoProfil.isNotEmpty) {
+      if (fotoProfil.startsWith('http')) {
+        fotoUrl = fotoProfil;
+      } else {
+        fotoUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$fotoProfil';
+      }
+    }
+    
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A365D).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: fotoUrl != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                fotoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.person, color: Color(0xFF1A365D), size: 28);
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A365D)),
+                    ),
+                  );
+                },
+              ),
+            )
+          : const Icon(Icons.person, color: Color(0xFF1A365D), size: 28),
     );
   }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../../utils/page_transitions.dart';
 import '../../services/auth_service.dart';
 import '../../user/components/detail_perusahaan_page.dart';
@@ -38,6 +40,15 @@ class MitraProfilPage extends StatelessWidget {
             builder: (context, auth, _) {
               final companyName = (auth.profile?.namaPerusahaan ?? 'Perusahaan Anda').toString();
               final email = auth.user?.email ?? 'admin@perusahaan.com';
+              final logo = auth.profile?.logo;
+              String? logoUrl;
+              if (logo != null && logo.isNotEmpty) {
+                if (logo.startsWith('http')) {
+                  logoUrl = logo;
+                } else {
+                  logoUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+                }
+              }
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -48,7 +59,24 @@ class MitraProfilPage extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.business, color: Color(0xFF1A365D), size: 36),
+                    child: logoUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.business, color: Color(0xFF1A365D), size: 36);
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              },
+                            ),
+                          )
+                        : const Icon(Icons.business, color: Color(0xFF1A365D), size: 36),
                   ),
                   const SizedBox(width: 16),
                   Column(
@@ -181,6 +209,10 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
   final TextEditingController _visi = TextEditingController();
   final TextEditingController _misi = TextEditingController();
   final TextEditingController _keunggulan = TextEditingController();
+  
+  String? _logoPath; // Local file path for selected image
+  String? _logoUrl; // Current logo URL from server
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -207,7 +239,48 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
           _keunggulan.text = k.toString();
         }
       }
+      
+      // Load current logo URL
+      final logo = auth.profile?.logo;
+      if (logo != null && logo.isNotEmpty) {
+        // If logo is a full URL, use it; otherwise construct it
+        if (logo.toString().startsWith('http')) {
+          setState(() {
+            _logoUrl = logo.toString();
+          });
+        } else {
+          setState(() {
+            _logoUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+          });
+        }
+      }
     });
+  }
+
+  Future<void> _pickLogo() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _logoPath = image.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih gambar: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -226,6 +299,67 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
             key: _formKey,
             child: ListView(
               children: [
+                // Logo upload section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Logo Perusahaan', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF1A365D))),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: GestureDetector(
+                        onTap: _pickLogo,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
+                          ),
+                          child: _logoPath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.file(
+                                    File(_logoPath!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : _logoUrl != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Image.network(
+                                        _logoUrl!,
+                                        key: ValueKey(_logoUrl), // Force reload when URL changes
+                                        fit: BoxFit.cover,
+                                        cacheWidth: 240, // Cache optimization
+                                        cacheHeight: 240,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Icon(Icons.business, size: 50, color: Color(0xFF1A365D));
+                                        },
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return const Center(child: CircularProgressIndicator());
+                                        },
+                                      ),
+                                    )
+                                  : const Icon(Icons.add_photo_alternate, size: 50, color: Color(0xFF1A365D)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _pickLogo,
+                        icon: const Icon(Icons.camera_alt, size: 18),
+                        label: const Text('Pilih Logo'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF1A365D),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
                 _input('Nama Perusahaan', _name, validator: (v) => v == null || v.trim().isEmpty ? 'Nama wajib diisi' : null),
                 const SizedBox(height: 12),
                 _input('Email', _email, keyboardType: TextInputType.emailAddress, readOnly: true, enabled: false),
@@ -265,15 +399,63 @@ class _EditProfilPerusahaanPageState extends State<_EditProfilPerusahaanPage> {
                               .toList(),
                         };
 
-                        final result = await ApiService.updateCompanyProfile(payload);
+                        final result = await ApiService.updateCompanyProfile(
+                          payload,
+                          logoPath: _logoPath,
+                        );
                         if (!mounted) return;
 
                         if (result['success'] == true) {
-                          // refresh user/company profile so header and other screens update
+                          // Update logo URL from response FIRST (before refresh) - this is immediate
+                          final responseData = result['data'];
+                          String? newLogoUrl;
+                          if (responseData != null && responseData['logo_url'] != null) {
+                            newLogoUrl = responseData['logo_url'].toString();
+                          } else if (responseData != null && responseData['logo'] != null) {
+                            // Construct URL from logo path
+                            final logo = responseData['logo'];
+                            newLogoUrl = logo.toString().startsWith('http')
+                                ? logo.toString()
+                                : '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$logo';
+                          }
+                          
+                          // Immediately update UI with new logo URL if available
+                          if (newLogoUrl != null && newLogoUrl.isNotEmpty) {
+                            // Add timestamp query parameter to force reload if same URL
+                            final timestamp = DateTime.now().millisecondsSinceEpoch;
+                            final logoUrlWithTimestamp = newLogoUrl.contains('?')
+                                ? '$newLogoUrl&_t=$timestamp'
+                                : '$newLogoUrl?_t=$timestamp';
+                            
+                            setState(() {
+                              _logoUrl = logoUrlWithTimestamp;
+                              _logoPath = null; // Clear local path since it's now on server
+                            });
+                          }
+                          
+                          // Then refresh user/company profile in background for other screens
                           await Provider.of<AuthService>(context, listen: false).refreshUser();
                           if (!mounted) return;
+                          
+                          // Double-check logo from refreshed profile (in case response didn't have it)
+                          if (newLogoUrl == null || newLogoUrl.isEmpty) {
+                            final auth = Provider.of<AuthService>(context, listen: false);
+                            final updatedLogo = auth.profile?.logo;
+                            if (updatedLogo != null && updatedLogo.isNotEmpty) {
+                              final profileLogoUrl = updatedLogo.toString().startsWith('http')
+                                  ? updatedLogo.toString()
+                                  : '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$updatedLogo';
+                              if (profileLogoUrl != _logoUrl) {
+                                setState(() {
+                                  _logoUrl = profileLogoUrl;
+                                });
+                              }
+                            }
+                          }
+                          
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil perusahaan berhasil disimpan')));
-                          Navigator.pop(context); // close editor and show refreshed profile immediately
+                          // Don't close immediately, let user see the updated logo
+                          // Navigator.pop(context); // close editor and show refreshed profile immediately
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Gagal menyimpan'), backgroundColor: Colors.red));
                         }
