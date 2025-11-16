@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../utils/page_transitions.dart';
 import '../../login_page.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import '../components/edit_profil_page.dart';
 import '../components/lamaran_saya_page.dart';
 import '../components/lowongan_tersimpan_page.dart';
@@ -59,24 +60,82 @@ class ProfilePage extends StatelessWidget {
                   Row(
                     children: [
                       // Profile picture
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 3,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: Icon(
-                            Icons.person,
-                            size: 50,
-                            color: Color(0xFF1A365D),
-                          ),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          // Get foto profil from profile data
+                          final profile = authService.profile;
+                          String? fotoProfilUrl;
+                          
+                          if (profile != null) {
+                            final dynamic p = profile;
+                            String? fotoProfil;
+                            
+                            // Try to access as AlumniProfile model first
+                            if (p is! Map) {
+                              try {
+                                fotoProfil = (p as dynamic)?.fotoProfil?.toString();
+                              } catch (e) {
+                                // Ignore if not available
+                              }
+                            }
+                            
+                            // Fallback to Map access
+                            if (fotoProfil == null || fotoProfil.isEmpty) {
+                              if (p is Map) {
+                                fotoProfil = (p['foto_profil_url'] ?? p['foto_profil'])?.toString();
+                              }
+                            }
+                            
+                            if (fotoProfil != null && fotoProfil.isNotEmpty) {
+                              if (fotoProfil.startsWith('http')) {
+                                fotoProfilUrl = fotoProfil;
+                              } else {
+                                fotoProfilUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$fotoProfil';
+                              }
+                            }
+                          }
+                          
+                          return Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 3,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: fotoProfilUrl != null && fotoProfilUrl.isNotEmpty
+                                  ? Image.network(
+                                      fotoProfilUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Icon(
+                                          Icons.person,
+                                          size: 50,
+                                          color: Color(0xFF1A365D),
+                                        );
+                                      },
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A365D)),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Color(0xFF1A365D),
+                                    ),
+                            ),
+                          );
+                        },
                       ),
                       
                       const SizedBox(width: 20),
@@ -119,20 +178,6 @@ class ProfilePage extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      
-                      // Edit button
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                          size: 20,
                         ),
                       ),
                     ],

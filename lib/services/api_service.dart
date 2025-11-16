@@ -623,72 +623,125 @@ class ApiService {
   }
 
   // Mitra: download all applicants data as ZIP
-  static Future<Map<String, dynamic>> downloadApplicantsZip(String jobId) async {
+  static Future<Map<String, dynamic>> downloadApplicantsZip(String jobId, {String? status}) async {
     try {
-      final url = Uri.parse('$baseUrl/mitra/jobs/$jobId/download-applicants');
-      final response = await http
-          .get(
-        url,
-        headers: _getHeaders(),
-      )
-          .timeout(const Duration(seconds: 300)); // Longer timeout for file download (5 minutes)
-
-      if (response.statusCode == 200) {
-        // Check if response is a ZIP file
-        final contentType = response.headers['content-type'] ?? '';
-        final contentDisposition = response.headers['content-disposition'] ?? '';
+      final uri = Uri.parse('$baseUrl/mitra/jobs/$jobId/download-applicants');
+      final url = status != null && status.isNotEmpty
+          ? uri.replace(queryParameters: {'status': status})
+          : uri;
+      // Create client with longer timeout and keep-alive for emulator compatibility
+      final client = http.Client();
+      http.Response? response;
+      int retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          response = await client
+              .get(
+            url,
+            headers: _getHeaders(),
+          )
+              .timeout(const Duration(seconds: 600)); // 10 minutes timeout for large files
+          
+          // If successful, break out of retry loop
+          if (response.statusCode == 200 || response.statusCode >= 400) {
+            break;
+          }
+        } catch (e) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            client.close();
+            return {
+              'success': false,
+              'message': 'Gagal mengunduh setelah $maxRetries percobaan. Pastikan koneksi internet stabil.',
+            };
+          }
+          // Wait before retry (exponential backoff)
+          await Future.delayed(Duration(seconds: retryCount * 2));
+          continue;
+        }
+      }
+      
+      if (response == null) {
+        client.close();
+        return {
+          'success': false,
+          'message': 'Gagal mendapatkan response dari server',
+        };
+      }
+      
+      try {
+        if (response.statusCode == 200) {
+          // Check if response is a ZIP file
+          final contentType = response.headers['content-type'] ?? '';
+          final contentDisposition = response.headers['content-disposition'] ?? '';
         
-        // Extract filename from content-disposition header if available
-        String fileName = 'data_pelamar_$jobId.zip';
-        if (contentDisposition.isNotEmpty) {
-          // Try to extract filename from content-disposition header
-          // Format: attachment; filename="filename.zip" or filename=filename.zip
-          // Try with double quotes first
-          final doubleQuoteMatch = RegExp(r'filename\*?="([^"]+)"').firstMatch(contentDisposition);
-          if (doubleQuoteMatch != null && doubleQuoteMatch.groupCount >= 1) {
-            final extractedName = doubleQuoteMatch.group(1);
-            if (extractedName != null && extractedName.isNotEmpty) {
-              fileName = extractedName.trim();
-            }
-          } else {
-            // Try with single quotes
-            final singleQuoteMatch = RegExp(r"filename\*?='([^']+)'").firstMatch(contentDisposition);
-            if (singleQuoteMatch != null && singleQuoteMatch.groupCount >= 1) {
-              final extractedName = singleQuoteMatch.group(1);
+          // Extract filename from content-disposition header if available
+          String fileName = 'data_pelamar_$jobId.zip';
+          if (contentDisposition.isNotEmpty) {
+            // Try to extract filename from content-disposition header
+            // Format: attachment; filename="filename.zip" or filename=filename.zip
+            // Try with double quotes first
+            final doubleQuoteMatch = RegExp(r'filename\*?="([^"]+)"').firstMatch(contentDisposition);
+            if (doubleQuoteMatch != null && doubleQuoteMatch.groupCount >= 1) {
+              final extractedName = doubleQuoteMatch.group(1);
               if (extractedName != null && extractedName.isNotEmpty) {
                 fileName = extractedName.trim();
               }
             } else {
-              // Try without quotes: filename=filename.zip
-              final unquotedMatch = RegExp(r'filename\*?=([^;\n]+)').firstMatch(contentDisposition);
-              if (unquotedMatch != null && unquotedMatch.groupCount >= 1) {
-                final extractedName = unquotedMatch.group(1);
+              // Try with single quotes
+              final singleQuoteMatch = RegExp(r"filename\*?='([^']+)'").firstMatch(contentDisposition);
+              if (singleQuoteMatch != null && singleQuoteMatch.groupCount >= 1) {
+                final extractedName = singleQuoteMatch.group(1);
                 if (extractedName != null && extractedName.isNotEmpty) {
                   fileName = extractedName.trim();
+                }
+              } else {
+                // Try without quotes: filename=filename.zip
+                final unquotedMatch = RegExp(r'filename\*?=([^;\n]+)').firstMatch(contentDisposition);
+                if (unquotedMatch != null && unquotedMatch.groupCount >= 1) {
+                  final extractedName = unquotedMatch.group(1);
+                  if (extractedName != null && extractedName.isNotEmpty) {
+                    fileName = extractedName.trim();
+                  }
                 }
               }
             }
           }
-        }
-        
-        if (contentType.contains('application/zip') || 
-            contentType.contains('application/x-zip-compressed') ||
-            contentType.contains('application/octet-stream') ||
-            response.bodyBytes.length > 100) { // Assume it's a ZIP if it's a binary file
-          // Save file to device
-          final directory = await getApplicationDocumentsDirectory();
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final filePath = '${directory.path}/$fileName';
-          final file = File(filePath);
-          await file.writeAsBytes(response.bodyBytes);
           
-          return {
-            'success': true,
-            'filePath': filePath,
-            'message': 'Data pelamar berhasil diunduh',
-          };
+          if (contentType.contains('application/zip') || 
+              contentType.contains('application/x-zip-compressed') ||
+              contentType.contains('application/octet-stream') ||
+              response.bodyBytes.length > 100) { // Assume it's a ZIP if it's a binary file
+            // Save file to device
+            final directory = await getApplicationDocumentsDirectory();
+            final timestamp = DateTime.now().millisecondsSinceEpoch;
+            final filePath = '${directory.path}/$fileName';
+            final file = File(filePath);
+            await file.writeAsBytes(response.bodyBytes);
+            
+            return {
+              'success': true,
+              'filePath': filePath,
+              'message': 'Data pelamar berhasil diunduh',
+            };
+          } else {
+            // Try to parse as JSON error
+            try {
+              final data = jsonDecode(response.body);
+              return {
+                'success': false,
+                'message': data['message'] ?? 'Gagal mengunduh data pelamar',
+              };
+            } catch (e) {
+              return {
+                'success': false,
+                'message': 'Format file tidak valid',
+              };
+            }
+          }
         } else {
-          // Try to parse as JSON error
           try {
             final data = jsonDecode(response.body);
             return {
@@ -698,23 +751,12 @@ class ApiService {
           } catch (e) {
             return {
               'success': false,
-              'message': 'Format file tidak valid',
+              'message': 'Gagal mengunduh data pelamar (Status: ${response.statusCode})',
             };
           }
         }
-      } else {
-        try {
-          final data = jsonDecode(response.body);
-          return {
-            'success': false,
-            'message': data['message'] ?? 'Gagal mengunduh data pelamar',
-          };
-        } catch (e) {
-          return {
-            'success': false,
-            'message': 'Gagal mengunduh data pelamar (Status: ${response.statusCode})',
-          };
-        }
+      } finally {
+        client.close();
       }
     } catch (e) {
       return {

@@ -108,14 +108,20 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
                 child: const Icon(Icons.dashboard_outlined, color: Color(0xFF1A365D), size: 36),
               ),
               const SizedBox(width: 16),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Dashboard Mitra', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6),
-                  Text('Ringkasan pelamar dan lowongan aktif', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                ],
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Dashboard Mitra', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 6),
+                    Text('Ringkasan pelamar dan lowongan aktif', 
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -145,13 +151,24 @@ class _MitraDashboardPageState extends State<MitraDashboardPage> {
               child: Icon(icon, color: color ?? const Color(0xFF1A365D)),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: Color(0xFF1A365D), fontSize: 16, fontWeight: FontWeight.w700)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, 
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(value, 
+                    style: const TextStyle(color: Color(0xFF1A365D), fontSize: 16, fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

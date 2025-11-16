@@ -289,11 +289,41 @@ class _EditProfilPageState extends State<EditProfilPage> {
         ),
       ),
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Foto profil
-            Stack(
+        child: Consumer<AuthService>(
+          builder: (context, authService, child) {
+            // Get foto profil from profile data
+            final profile = _profileData;
+            String? fotoProfilUrl;
+            
+            if (profile != null) {
+              String? fotoProfil;
+              
+              // Access as Map
+              if (profile is Map) {
+                fotoProfil = (profile['foto_profil_url'] ?? profile['foto_profil'])?.toString();
+              } else {
+                // Try to access as AlumniProfile model
+                try {
+                  fotoProfil = (profile as dynamic)?.fotoProfil?.toString();
+                } catch (e) {
+                  // Ignore if not available
+                }
+              }
+              
+              if (fotoProfil != null && fotoProfil.isNotEmpty) {
+                if (fotoProfil.startsWith('http')) {
+                  fotoProfilUrl = fotoProfil;
+                } else {
+                  fotoProfilUrl = '${ApiService.baseUrl.replaceFirst('/api', '')}/storage/$fotoProfil';
+                }
+              }
+            }
+            
+            // Get user name
+            final userName = authService.user?.name ?? 'Alumni';
+            
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 100,
@@ -307,46 +337,47 @@ class _EditProfilPageState extends State<EditProfilPage> {
                     ),
                   ),
                   child: ClipOval(
-                    child: Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Color(0xFF1A365D),
-                    ),
+                    child: fotoProfilUrl != null && fotoProfilUrl.isNotEmpty
+                        ? Image.network(
+                            fotoProfilUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Color(0xFF1A365D),
+                              );
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A365D)),
+                                ),
+                              );
+                            },
+                          )
+                        : Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Color(0xFF1A365D),
+                          ),
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF1A365D),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                const SizedBox(height: 12),
+                Text(
+                  userName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Ubah Foto Profil',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

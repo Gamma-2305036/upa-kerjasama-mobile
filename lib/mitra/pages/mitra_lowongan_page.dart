@@ -179,14 +179,20 @@ class _MitraLowonganPageState extends State<MitraLowonganPage> with SingleTicker
                 child: const Icon(Icons.work_outline, color: Color(0xFF1A365D), size: 36),
               ),
               const SizedBox(width: 16),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Lowongan', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6),
-                  Text('Kelola dan pantau lowongan Anda', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                ],
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Lowongan', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 6),
+                    Text('Kelola dan pantau lowongan Anda', 
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1147,6 +1153,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     final pelamar = app['pelamar'] as Map<String, dynamic>?;
     final name = pelamar?['name'] ?? 'Pelamar';
     final email = pelamar?['email'] ?? '-';
+    final fotoProfilUrl = pelamar?['foto_profil_url'] as String?;
     final status = (app['status'] ?? '').toString();
     Color color;
     switch (status) {
@@ -1179,11 +1186,37 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(color: const Color(0xFF1A365D).withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(
-                  Icons.person,
-                  color: Color(0xFF1A365D),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A365D).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: fotoProfilUrl != null && fotoProfilUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          fotoProfilUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person,
+                              color: Color(0xFF1A365D),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A365D)),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        color: Color(0xFF1A365D),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1417,13 +1450,18 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
   }
 
   Future<void> _downloadAllApplicantsData() async {
+    // Determine which applicants to download based on active tab
+    final currentApps = _filteredApps;
+    final statusFilter = _isAcceptedTab ? 'diterima' : null;
+    final filterText = _isAcceptedTab ? 'yang diterima' : '';
+    
     // Show confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Download Data Pelamar'),
         content: Text(
-          'Download semua data pelamar (${_allApps.length} pelamar) dalam format ZIP? '
+          'Download data pelamar $filterText (${currentApps.length} pelamar) dalam format ZIP? '
           'File akan berisi profil, data akademik, data keluarga, dan dokumen pendukung.',
         ),
         actions: [
@@ -1467,7 +1505,7 @@ class _ApplicantsScreenState extends State<_ApplicantsScreen> with SingleTickerP
     );
 
     try {
-      final result = await ApiService.downloadApplicantsZip(widget.jobId);
+      final result = await ApiService.downloadApplicantsZip(widget.jobId, status: statusFilter);
       
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
