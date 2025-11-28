@@ -901,9 +901,9 @@ class ApiService {
       int total = 0;
       List<String> missingFields = [];
 
-      // Check profile data (7 required fields - CV tidak termasuk di sini)
+      // Check profile data (6 required fields - CV tidak termasuk di sini, NIM ada di data akademik)
       final profileFields = [
-        'nim', 'nik', 'no_hp', 'tempat_lahir', 
+        'nik', 'no_hp', 'tempat_lahir', 
         'tanggal_lahir', 'jenis_kelamin', 'alamat'
       ];
       total += profileFields.length;
@@ -916,8 +916,8 @@ class ApiService {
         }
       }
 
-      // Check academic data (5 required fields)
-      final academicFields = ['program_studi', 'universitas', 'tahun_masuk', 'tahun_lulus', 'ipk'];
+      // Check academic data (6 required fields termasuk NIM)
+      final academicFields = ['nim', 'program_studi', 'universitas', 'tahun_masuk', 'tahun_lulus', 'ipk'];
       total += academicFields.length;
       for (var field in academicFields) {
         final value = academic[field];

@@ -82,13 +82,13 @@ class _EditProfilPageState extends State<EditProfilPage> {
     double totalWeight = 0.0;
     double completedWeight = 0.0;
     
-    // 1. Check Detail Profile (25% total, 7 field profile saja - CV tidak termasuk di sini)
+    // 1. Check Detail Profile (25% total, 6 field profile saja - CV tidak termasuk di sini, NIM ada di data akademik)
     final profile = _profileData ?? {};
     const double profileSectionWeight = 25.0; // 25% dari total
-    const int totalProfileFields = 7; // 7 field profile (CV tidak termasuk)
+    const int totalProfileFields = 6; // 6 field profile (CV tidak termasuk, NIM ada di data akademik)
     
     final profileRequiredFields = [
-      'nim', 'nik', 'no_hp', 'tempat_lahir', 
+      'nik', 'no_hp', 'tempat_lahir', 
       'tanggal_lahir', 'jenis_kelamin', 'alamat'
     ];
     
@@ -114,14 +114,14 @@ class _EditProfilPageState extends State<EditProfilPage> {
     print('  Section 1 Weight: ${profileSectionPercentage.toStringAsFixed(2)}% / $profileSectionWeight%');
     print('  Note: CV dihitung sebagai bagian dari dokumen pendukung, bukan di sini');
 
-    // 2. Check Informasi Akademik (25% total, 5 fields)
+    // 2. Check Informasi Akademik (25% total, 6 fields termasuk NIM)
     final academic = _academicData ?? {};
     const double academicSectionWeight = 25.0; // 25% dari total
     
     print('\n📚 Section 2: Informasi Akademik');
     print('  Academic data: $academic');
     
-    final academicRequiredFields = ['program_studi', 'universitas', 'tahun_masuk', 'tahun_lulus', 'ipk'];
+    final academicRequiredFields = ['nim', 'program_studi', 'universitas', 'tahun_masuk', 'tahun_lulus', 'ipk'];
     
     int academicCompleted = 0;
     for (var field in academicRequiredFields) {
