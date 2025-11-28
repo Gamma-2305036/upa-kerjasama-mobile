@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "132704276288",
+    "project_id": "upa-kerjasama-a8f07",
+    "storage_bucket": "upa-kerjasama-a8f07.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:132704276288:android:8d4bc7a683071710f334a5",
+        "android_client_info": {
+          "package_name": "com.example.upa_kerjasama_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "132704276288-1mqg840eifbjed0qs9udl76ki33tdic0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.upa_kerjasama_mobile",
+            "certificate_hash": "f164e8bb88789d78feb8614e0244cbb82307f69e"
+          }
+        },
+        {
+          "client_id": "132704276288-i70m66f11l8asts55csiln2dosjbkfb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrZEYyWIPyZurcg2s1iev7Smw7B-EWpXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "132704276288-i70m66f11l8asts55csiln2dosjbkfb1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "132704276288-a2520s0kcvl0paujbn9ppeg3emhe156h.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.upaKerjasamaMobile"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

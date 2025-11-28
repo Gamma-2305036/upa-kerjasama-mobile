@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:math';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'utils/page_transitions.dart';
 import 'user/components/main_navigation.dart';
 import 'services/auth_service.dart';
@@ -60,12 +62,104 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _handleGoogleLogin() {
-    // Dummy Google login - langsung redirect ke main navigation
-    PageTransitions.fadeReplace(
-      context,
-      const MainNavigationWrapper(),
-    );
+  static const String _googleServerClientId =
+      '132704276288-i70m66f11l8asts55csiln2dosjbkfb1.apps.googleusercontent.com';
+
+  Future<void> _handleGoogleLogin() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    
+    try {
+      // Initialize Google Sign In
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        serverClientId: _googleServerClientId,
+      );
+
+      // Force account chooser to appear every time by clearing previous sessions
+      try {
+        await googleSignIn.signOut();
+        await googleSignIn.disconnect();
+      } catch (_) {
+        // Ignore cleanup errors; we'll proceed to sign in
+      }
+
+      // Sign in with Google
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        return;
+      }
+
+      // Get authentication details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
+        throw Exception('Google tidak mengembalikan ID token. Coba lagi.');
+      }
+
+      // Sign in to Firebase using the Google credentials to obtain Firebase ID token
+      String? firebaseIdToken;
+      try {
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final firebaseUserCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        firebaseIdToken = await firebaseUserCredential.user?.getIdToken();
+      } catch (firebaseError) {
+        debugPrint('Firebase sign-in failed: $firebaseError');
+      }
+
+      // Call backend API with Google credentials (and Firebase token if available)
+      final success = await authService.googleLogin(
+        idToken: googleAuth.idToken!,
+        email: googleUser.email,
+        name: googleUser.displayName ?? '',
+        googleId: googleUser.id,
+        photoUrl: googleUser.photoUrl,
+        firebaseIdToken: firebaseIdToken,
+      );
+
+      if (success && mounted) {
+        // Check user role and navigate accordingly
+        if (authService.hasRole('alumni')) {
+          PageTransitions.fadeReplace(
+            context,
+            const MainNavigationWrapper(),
+          );
+        } else if (authService.hasRole('mitra')) {
+          // Navigate to mitra dashboard
+          Navigator.pushReplacementNamed(context, '/mitra');
+        } else {
+          // Show error for unsupported role
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Role tidak didukung untuk aplikasi mobile'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else if (mounted) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authService.error ?? 'Login dengan Google gagal'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -333,7 +427,7 @@ class _LoginPageState extends State<LoginPage> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: _handleGoogleLogin,
+                      onTap: () => _handleGoogleLogin(),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

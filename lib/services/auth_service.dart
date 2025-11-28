@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 
@@ -59,12 +61,70 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // Google Login
+  Future<bool> googleLogin({
+    required String idToken,
+    required String email,
+    required String name,
+    required String googleId,
+    String? photoUrl,
+    String? firebaseIdToken,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final result = await ApiService.googleLogin(
+        idToken: idToken,
+        email: email,
+        name: name,
+        googleId: googleId,
+        photoUrl: photoUrl,
+        firebaseIdToken: firebaseIdToken,
+      );
+      
+      if (result['success']) {
+        // Set user immediately from login response
+        final userData = result['data']['user'];
+        if (userData != null) {
+          _user = User.fromJson(userData);
+          notifyListeners();
+        }
+        
+        // Set profile from response if available
+        if (result['data']['profile'] != null) {
+          _profile = _parseProfile(result['data']['profile']);
+          notifyListeners();
+        } else {
+          // Load fresh profile from backend
+          await _loadUserProfile();
+        }
+        return true;
+      } else {
+        _setError(result['message']);
+        return false;
+      }
+    } catch (e) {
+      _setError('Terjadi kesalahan: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Logout
   Future<void> logout() async {
     _setLoading(true);
     
     try {
       await ApiService.logout();
+      try {
+        final googleSignIn = GoogleSignIn();
+        await googleSignIn.signOut();
+        await googleSignIn.disconnect();
+      } catch (_) {
+        // ignore google sign-out errors
+      }
     } catch (e) {
       // Continue with logout even if API call fails
     }

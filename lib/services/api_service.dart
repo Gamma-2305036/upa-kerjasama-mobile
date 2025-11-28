@@ -46,6 +46,57 @@ class ApiService {
     return headers;
   }
 
+  // Google Login
+  static Future<Map<String, dynamic>> googleLogin({
+    required String idToken,
+    required String email,
+    required String name,
+    required String googleId,
+    String? photoUrl,
+    String? firebaseIdToken,
+  }) async {
+    try {
+      print('📍 Google Login URL: $baseUrl/auth/google');
+      final response = await http
+          .post(
+        Uri.parse('$baseUrl/auth/google'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'id_token': idToken,
+          'email': email,
+          'name': name,
+          'google_id': googleId,
+          'photo_url': photoUrl,
+          if (firebaseIdToken != null) 'firebase_id_token': firebaseIdToken,
+        }),
+      )
+          .timeout(const Duration(seconds: 30));
+
+      final data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200 && data['success']) {
+        // Save token
+        await saveToken(data['data']['token']);
+        return data;
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Login dengan Google gagal',
+        };
+      }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message': 'Permintaan login Google timeout. Periksa koneksi Anda.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Terjadi kesalahan: ${e.toString()}',
+      };
+    }
+  }
+
   // Login
   static Future<Map<String, dynamic>> login(String email, String password) async {
     try {
