@@ -940,48 +940,36 @@ class ApiService {
         }
       }
 
-      // Check documents - CV termasuk di sini sebagai dokumen pendukung
-      // Cek apakah ada CV di dokumen pendukung
-      bool hasCvInDocuments = false;
-      bool hasOtherDocuments = false;
+      // Check documents - wajib per jenis dokumen
+      final requiredDocs = [
+        {'keys': ['cv'], 'label': 'CV'},
+        {'keys': ['ktp'], 'label': 'KTP'},
+        {'keys': ['ijazah', 'skl'], 'label': 'Ijazah/SKL'},
+        {'keys': ['transkrip'], 'label': 'Transkrip Nilai'},
+        {'keys': ['sertifikat'], 'label': 'Sertifikat'},
+        {'keys': ['portofolio'], 'label': 'Portofolio'},
+        {'keys': ['lain', 'dokumen lainnya'], 'label': 'Dokumen Lainnya'},
+      ];
       
-      if (documents.isNotEmpty) {
-        for (var doc in documents) {
-          final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ?? 
-                              doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
-          if (jenisDokumen == 'cv') {
-            hasCvInDocuments = true;
-          } else if (jenisDokumen.isNotEmpty) {
-            hasOtherDocuments = true;
-          }
+      bool docMatches(Map doc, List<String> keys) {
+        final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ??
+            doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
+        return keys.any((k) => jenisDokumen.contains(k));
+      }
+      
+      int docCompleted = 0;
+      for (final req in requiredDocs) {
+        final keys = (req['keys'] as List).cast<String>();
+        final found = documents.any((doc) => docMatches((doc as Map), keys));
+        if (found) {
+          docCompleted++;
+        } else {
+          missingFields.add(req['label'] as String);
         }
       }
       
-      // Cek juga CV dari profile/file_cv (untuk backward compatibility)
-      final hasCvFromProfile = (profile['cv_url'] != null && profile['cv_url'].toString().trim().isNotEmpty && profile['cv_url'].toString().trim() != 'null') ||
-                              (profile['file_cv'] != null && profile['file_cv'].toString().trim().isNotEmpty && profile['file_cv'].toString().trim() != 'null');
-      
-      // Dokumen lengkap jika ada minimal 1 dokumen (termasuk CV)
-      bool isDocumentsComplete = documents.isNotEmpty;
-      
-      // Jika ada CV dari profile tapi belum ada di dokumen pendukung, tetap dianggap ada dokumen
-      if (hasCvFromProfile && !hasCvInDocuments) {
-        isDocumentsComplete = true; // Tetap dianggap lengkap jika ada CV di profile
-      }
-      
-      total += 1;
-      if (isDocumentsComplete) {
-        completed++;
-      } else {
-        missingFields.add('Dokumen Pendukung');
-      }
-      
-      // Jika ada dokumen lain tapi tidak ada CV (baik di dokumen pendukung maupun profile), tambahkan CV ke missing fields
-      if (hasOtherDocuments && !hasCvInDocuments && !hasCvFromProfile) {
-        if (!missingFields.contains('CV')) {
-          missingFields.add('CV');
-        }
-      }
+      total += requiredDocs.length;
+      completed += docCompleted;
 
       final percentage = total > 0 ? ((completed / total) * 100).round() : 0;
       final isComplete = percentage >= 80;

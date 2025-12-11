@@ -431,12 +431,14 @@ class _LoginPageState extends State<LoginPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Google logo
-                          Container(
+                          // Google logo from asset
+                          SizedBox(
                             width: 24,
                             height: 24,
-                            child: CustomPaint(
-                              painter: GoogleLogoPainter(),
+                            child: Image.asset(
+                              'assets/images/logogoolge.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 20, color: Color(0xFF4A5568)),
                             ),
                           ),
                           const SizedBox(width: 16),

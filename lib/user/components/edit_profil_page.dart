@@ -173,47 +173,47 @@ class _EditProfilPageState extends State<EditProfilPage> {
     print('  Section 3 Progress: $familyCompleted/${familyRequiredFields.length} fields (${((familyCompleted / familyRequiredFields.length) * 100).toStringAsFixed(1)}%)');
     print('  Section 3 Weight: ${familySectionPercentage.toStringAsFixed(2)}% / $familySectionWeight%');
 
-    // 4. Check Dokumen Pendukung (25% total)
-    // CV termasuk di sini sebagai dokumen pendukung dengan jenis_dokumen = 'cv'
+    // 4. Check Dokumen Pendukung (25% total) - wajib per jenis dokumen
     const double documentsSectionWeight = 25.0; // 25% dari total
     
     print('\n📄 Section 4: Dokumen Pendukung');
     print('  Documents: $_documents');
     print('  Documents count: ${_documents?.length ?? 0}');
     
-    // Cek apakah ada CV di dokumen pendukung
-    bool hasCvInDocuments = false;
-    if (_documents != null && _documents!.isNotEmpty) {
-      for (var doc in _documents!) {
-        final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ?? 
-                            doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
-        if (jenisDokumen == 'cv') {
-          hasCvInDocuments = true;
-          print('  ✅ CV ditemukan di dokumen pendukung');
-          break;
-        }
+    final documents = _documents ?? [];
+    List<Map<String, dynamic>> requiredDocs = [
+      {'keys': ['cv'], 'label': 'CV'},
+      {'keys': ['ktp'], 'label': 'KTP'},
+      {'keys': ['ijazah', 'skl'], 'label': 'Ijazah/SKL'},
+      {'keys': ['transkrip'], 'label': 'Transkrip Nilai'},
+      {'keys': ['sertifikat'], 'label': 'Sertifikat'},
+      {'keys': ['portofolio'], 'label': 'Portofolio'},
+      {'keys': ['lain', 'dokumen lainnya'], 'label': 'Dokumen Lainnya'},
+    ];
+    
+    bool docMatches(Map<String, dynamic> doc, List<String> keys) {
+      final jenisDokumen = doc['jenis_dokumen']?.toString().toLowerCase() ??
+          doc['tipe_dokumen']?.toString().toLowerCase() ?? '';
+      return keys.any((k) => jenisDokumen.contains(k));
+    }
+    
+    int docCompleted = 0;
+    for (final req in requiredDocs) {
+      final keys = (req['keys'] as List).cast<String>();
+      final found = documents.any((doc) => docMatches((doc as Map).cast<String, dynamic>(), keys));
+      if (found) {
+        docCompleted++;
+        print('  ✅ ${req['label']} ditemukan');
+      } else {
+        print('  ❌ ${req['label']}: belum ada');
       }
     }
     
-    // Cek juga CV dari profile/file_cv (untuk backward compatibility)
-    final hasCvFromProfile = (_cvUrl != null && _cvUrl!.trim().isNotEmpty && _cvUrl!.trim() != 'null') ||
-                            (profile['cv_url'] != null && profile['cv_url'].toString().trim().isNotEmpty && profile['cv_url'].toString().trim() != 'null') ||
-                            (profile['file_cv'] != null && profile['file_cv'].toString().trim().isNotEmpty && profile['file_cv'].toString().trim() != 'null');
-    
-    // Dokumen lengkap jika ada minimal 1 dokumen (termasuk CV)
-    bool isDocumentsComplete = _documents != null && _documents!.isNotEmpty;
-    
-    // Jika ada CV dari profile tapi belum ada di dokumen pendukung, tetap dianggap ada dokumen
-    if (hasCvFromProfile && !hasCvInDocuments) {
-      print('  ℹ️ CV ditemukan di profile/file_cv (backward compatibility)');
-      isDocumentsComplete = true; // Tetap dianggap lengkap jika ada CV di profile
-    }
-    
-    double documentsSectionPercentage = isDocumentsComplete ? documentsSectionWeight : 0.0;
+    double documentsSectionPercentage = (docCompleted / requiredDocs.length) * documentsSectionWeight;
     totalWeight += documentsSectionWeight;
     completedWeight += documentsSectionPercentage;
     
-    print('  Section 4 Progress: ${isDocumentsComplete ? 1 : 0}/1 (minimal 1 dokumen, termasuk CV)');
+    print('  Section 4 Progress: $docCompleted/${requiredDocs.length} dokumen wajib');
     print('  Section 4 Weight: ${documentsSectionPercentage.toStringAsFixed(2)}% / $documentsSectionWeight%');
 
     // Calculate final percentage
